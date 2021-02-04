@@ -23,6 +23,8 @@ interface ICurveFi {
         uint256 min_mint_amount
     ) external payable;
 
+    function coins(uint256) external returns (address);
+
     function remove_liquidity_imbalance(uint256[4] calldata amounts, uint256 max_burn_amount) external;
 
     function remove_liquidity(uint256 _amount, uint256[4] calldata amounts) external;
