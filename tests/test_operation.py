@@ -12,14 +12,46 @@ import brownie
 #           - change in loading (from low to high and high to low)
 #           - strategy operation at different loading levels (anticipated and "extreme")
 
-def test_opsss(currency,strategy,zapper, rewards,chain,vault, whale,gov,strategist, interface):
-    rate_limit = 1_000_000_000 *1e18
+def test_hbtc_1(currency,strategy,yvault, orb,rewards,chain,yhbtcstrategy,vault, ychad, whale,gov,strategist, interface):
+
     debt_ratio = 10_000
-    vault.addStrategy(strategy, debt_ratio, rate_limit, 1000, {"from": gov})
+    vault.addStrategy(strategy, debt_ratio, 0, 1000, {"from": gov})
 
     currency.approve(vault, 2 ** 256 - 1, {"from": whale} )
     whalebefore = currency.balanceOf(whale)
-    whale_deposit  = 100 *1e18
+    whale_deposit  = 2 *1e18
+    vault.deposit(whale_deposit, {"from": whale})
+    strategy.harvest({'from': strategist})
+    #print(strategy.curveTokenToWant(1e18))
+    #print(yvault.totalSupply())
+    #assert strategy.curveTokensInYVault() == yvault.balanceOf(strategy)
+    #print(yvault.balanceOf(strategy))
+    yvault.earn({'from': ychad})
+    #yhbtcstrategy.deposit()
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+
+    chain.sleep(2592000)
+    chain.mine(1)
+    yhbtcstrategy.harvest({'from': orb})
+    strategy.harvest({'from': strategist})
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+
+    print("\nEstimated APR: ", "{:.2%}".format(((vault.totalAssets()-2*1e18)*12)/(2*1e18)))
+
+
+
+
+
+def test_opsss(currency,strategy,zapper, rewards,chain,vault, whale,gov,strategist, interface):
+
+    debt_ratio = 10_000
+    vault.addStrategy(strategy, debt_ratio, 0, 1000, {"from": gov})
+
+    currency.approve(vault, 2 ** 256 - 1, {"from": whale} )
+    whalebefore = currency.balanceOf(whale)
+    whale_deposit  = 10 *1e18
     vault.deposit(whale_deposit, {"from": whale})
     strategy.harvest({'from': strategist})
 

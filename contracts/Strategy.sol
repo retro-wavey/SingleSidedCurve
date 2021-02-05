@@ -41,41 +41,46 @@ contract Strategy is BaseStrategy {
     uint256 public lastInvest = 0;
     uint256 public minTimePerInvest = 3600;
     uint256 public maxSingleInvest = 2*1e18; // 2 hbtc per hour default
+    uint256 public slippageProtection = 50; //out of 10000. 50 = 0.5%
+    uint256 public constant DENOMINATOR = 10000;
 
 
-    uint256 public wantRateLimit = 2 *1e8;
-    uint256 public rateLimitPeriod = 3600;
-
-    uint256 public curveId;
+    int128 public curveId;
 
 
 
-    constructor(address _vault, uint256 _crvId) public BaseStrategy(_vault) {
+    constructor(address _vault) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
-        // maxReportDelay = 6300;
-        // profitFactor = 100;
-        // debtThreshold = 0;
+         maxReportDelay = 6300;
+        profitFactor = 1500;
+        debtThreshold = 100*1e18;
 
         want.safeApprove(address(curvePool), uint256(-1));
         hCRV.approve(address(yvhCRV), uint256(-1));
 
-
         if(curvePool.coins(0) == address(want)){
             curveId =0;
-
         }else if ( curvePool.coins(1) == address(want)){
             curveId =1;
         }else{
             require(false, "Coin not found");
         }
-
-
     }
 
 
     function name() external override view returns (string memory) {
         // Add your own name here, suggestion e.g. "StrategyCreamYFI"
-        return string(abi.encodePacked("SingleSidedCrv", want.symbol()));
+        return string(abi.encodePacked("SingleSidedCrv"));
+    }
+
+    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyGovernance {
+        minTimePerInvest = _minTimePerInvest;
+    }
+    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyGovernance {
+        maxSingleInvest = _maxSingleInvest;
+    }
+    function updateSlippageProtection(uint256 _slippageProtection) public onlyGovernance {
+        slippageProtection = _slippageProtection;
     }
 
     function estimatedTotalAssets() public override view returns (uint256) {
@@ -85,24 +90,29 @@ contract Strategy is BaseStrategy {
 
     // returns value of total 3pool
     function curveTokenToWant(uint256 tokens) public view returns (uint256) {
-
-        //we want to choose lower value of virtual price and amount we really get out
-        uint256 virtualOut = curvePool.get_virtual_price().mul(tokens).div(1e18);
-
-        uint256 realOut;
-        if(curveId == 0){
-            realOut = curvePool.get_dy(0,1,tokens);
-        } else{
-            realOut = curvePool.get_dy(1,0,tokens);
+        if(tokens == 0){
+            return 0;
         }
 
+        //we want to choose lower value of virtual price and amount we really get out
+        //this means we will always underestimate current assets. 
+        uint256 virtualOut = curvePool.get_virtual_price().mul(tokens).div(1e18);
+
+        uint256 realOut = curvePool.calc_withdraw_one_coin(tokens, curveId);
+
         return Math.min(virtualOut, realOut);
+        //return realOut;
     }
 
     function curveTokensInYVault() public view returns (uint256) {
         uint256 balance = yvhCRV.balanceOf(address(this));
+
+        if(yvhCRV.totalSupply() == 0){
+            //needed because of revert on priceperfullshare if 0
+            return 0;
+        }
         uint256 pricePerShare = yvhCRV.getPricePerFullShare();
-        return balance.mul(pricePerShare).div(10 ** yvhCRV.decimals());
+        return balance.mul(pricePerShare).div(1e18);
     }
 
     function prepareReturn(uint256 _debtOutstanding)
@@ -134,7 +144,16 @@ contract Strategy is BaseStrategy {
         if(toFree > wantBalance){
             toFree = toFree.sub(wantBalance);
 
-            withdrawSome(toFree);
+            (, uint256 withdrawalLoss) = withdrawSome(toFree);
+
+            //when we withdraw we can lose money in the withdrawal
+            if(withdrawalLoss < _profit){
+                _profit = _profit.sub(withdrawalLoss);
+
+            }else{
+                _loss = _loss.add(withdrawalLoss.sub(_profit));
+                _profit = 0;
+            }
 
             wantBalance = want.balanceOf(address(this));
 
@@ -148,9 +167,39 @@ contract Strategy is BaseStrategy {
         
     }
 
+    function tendTrigger(uint256 callCost) public override view returns (bool) {
+
+        uint256 wantBal = want.balanceOf(address(this));
+        uint256 _wantToInvest = Math.min(wantBal, maxSingleInvest);
+
+        if(lastInvest.add(minTimePerInvest) < block.timestamp &&  _wantToInvest > 1 && _checkSlip(_wantToInvest)){
+            return true;
+        }
+    }
+
+    function _checkSlip(uint256 _wantToInvest) private view returns (bool){
+        uint256 expectedOut = _wantToInvest.mul(1e18).div(curvePool.get_virtual_price());
+        uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtection)).div(DENOMINATOR);
+
+        uint256[2] memory amounts; 
+
+        if(curveId == 0){
+            amounts = [_wantToInvest, 0];
+        }else{
+            amounts = [0, _wantToInvest];
+        }
+
+        uint256 roughOut = curvePool.calc_token_amount(amounts, true);
+
+        if(roughOut >= maxSlip){
+            return true;
+        }
+    }
+
+
     function adjustPosition(uint256 _debtOutstanding) internal override {
 
-        if(lastInvest.add(rateLimitPeriod) > block.timestamp ){
+        if(lastInvest.add(minTimePerInvest) > block.timestamp ){
             return;
         }
 
@@ -160,16 +209,23 @@ contract Strategy is BaseStrategy {
         if (_wantToInvest > 0) {
             //add to curve (single sided)
 
-            if(curveId == 0){
-                curvePool.add_liquidity([_wantToInvest, 0], 0);
-            }else{
-                curvePool.add_liquidity([0, _wantToInvest], 0);
-            }
-            
-            //now add to yearn
-            yvhCRV.depositAll();
+            uint256[2] memory amounts; 
 
-            lastInvest = block.timestamp;
+            if(curveId == 0){
+                amounts = [_wantToInvest, 0];
+            }else{
+                amounts = [0, _wantToInvest];
+            }
+
+           
+            if(_checkSlip(_wantToInvest)){
+                curvePool.add_liquidity(amounts, 0);
+                //now add to yearn
+                yvhCRV.depositAll();
+
+                lastInvest = block.timestamp;
+            }
+
         }
     }
 
@@ -181,25 +237,49 @@ contract Strategy is BaseStrategy {
 
         uint256 wantBal = want.balanceOf(address(this));
         if(wantBal < _amountNeeded){
-            withdrawSome(_amountNeeded.sub(wantBal));
+            (_liquidatedAmount, _loss) = withdrawSome(_amountNeeded.sub(wantBal));
         }
 
-        _liquidatedAmount = Math.min(_amountNeeded, want.balanceOf(address(this)));
+        _liquidatedAmount = Math.min(_amountNeeded, _liquidatedAmount.add(wantBal));
 
     }
 
-    //withdraw amount from safebox
     //safe to enter more than we have
-    function withdrawSome(uint256 _amount) internal returns (uint256) {
+    function withdrawSome(uint256 _amount) internal returns (uint256 _liquidatedAmount, uint256 _loss) {
 
-        //how much can we withdraw
-        if(curveId == 0){
-            curvePool.remove_liquidity_imbalance([_amount, 0], uint256(-1));
-        }else{
-             curvePool.remove_liquidity_imbalance([0, _amount], uint256(-1));
+        uint256 wantBalanceBefore = want.balanceOf(address(this));
+
+        //let's take the amount we need if virtual price is real. Let's add the 
+        uint256 virtualPrice = curvePool.get_virtual_price();
+        uint256 amountWeNeedFromVirtualPrice = _amount.mul(1e18).div(virtualPrice);
+
+        uint256 crvBeforeBalance = hCRV.balanceOf(address(this)); //should be zero but just incase...
+
+        uint256 pricePerFullShare = yvhCRV.getPricePerFullShare();
+        uint256 amountFromVault = amountWeNeedFromVirtualPrice.mul(1e18).div(pricePerFullShare);
+        
+
+        if(amountFromVault > yvhCRV.balanceOf(address(this))){
+            amountFromVault = yvhCRV.balanceOf(address(this));
+            //this is not loss. so we amend amount
+
+            uint256 _amountOfCrv = amountFromVault.mul(pricePerFullShare).div(1e18);
+            _amount = _amountOfCrv.mul(virtualPrice).div(1e18);
         }
 
+        yvhCRV.withdraw(_amount);
+        uint256 toWithdraw = hCRV.balanceOf(address(this)).sub(crvBeforeBalance);
+ 
+        curvePool.remove_liquidity_one_coin(toWithdraw, curveId, toWithdraw.mul(DENOMINATOR.sub(slippageProtection)).div(DENOMINATOR));
 
+        uint256 diff = want.balanceOf(address(this)).sub(wantBalanceBefore);
+
+        if(diff > _amount){
+            _liquidatedAmount = _amount;
+        }else{
+            _liquidatedAmount = diff;
+            _loss = _amount.sub(diff);
+        }
 
     }
 

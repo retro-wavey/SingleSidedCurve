@@ -8,6 +8,7 @@ interface IVaultV1 is IERC20 {
     function deposit(uint256) external;
 
     function depositAll() external;
+    function earn() external;
 
     function withdraw(uint256) external;
 

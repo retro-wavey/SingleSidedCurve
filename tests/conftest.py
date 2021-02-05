@@ -8,18 +8,42 @@ def andre(accounts):
 
 @pytest.fixture
 def currency(interface):
-    #this one is curvesteth
-    yield interface.ERC20('0x06325440D014e39736583c165C2963BA99fAf14E')
+    #this one is hbtc
+    yield interface.ERC20('0x0316EB71485b0Ab14103307bf65a021042c6d380')
 
 @pytest.fixture
 def whale(accounts, web3, currency, chain):
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
-    acc = accounts.at('0x006d0f31a00e1f9c017ab039e9d0ba699433a28c', force=True)
+    #acc = accounts.at('0x006d0f31a00e1f9c017ab039e9d0ba699433a28c', force=True)
+    #big huboi wallet
+    acc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
 
     assert currency.balanceOf(acc)  > 0
+    yield acc
+
+@pytest.fixture
+def yvault(interface):
+    yield interface.IVaultV1('0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5')
+
+@pytest.fixture
+def yhbtcstrategy(interface):
+    yield interface.IStratV1('0xE02363cB1e4E1B77a74fAf38F3Dbb7d0B70F26D7')
+
+@pytest.fixture
+def devms(accounts):
+    acc = accounts.at('0x846e211e8ba920B353FB717631C015cf04061Cc9', force=True)
+    yield acc
+@pytest.fixture
+def orb(accounts):
+    acc = accounts.at('0x710295b5f326c2e47e6dd2e7f6b5b0f7c5ac2f24', force=True)
+    yield acc
     
+
+@pytest.fixture
+def ychad(accounts):
+    acc = accounts.at('0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52', force=True)
     yield acc
 
 @pytest.fixture
