@@ -30,6 +30,12 @@ def yvault(interface):
 @pytest.fixture
 def yhbtcstrategy(interface):
     yield interface.IStratV1('0xE02363cB1e4E1B77a74fAf38F3Dbb7d0B70F26D7')
+@pytest.fixture
+def hCRV(interface):
+    yield interface.ICrvV3('0xb19059ebb43466C323583928285a49f558E572Fd')
+@pytest.fixture
+def curvePool(interface):
+    yield interface.ICurveFi('0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F')
 
 @pytest.fixture
 def devms(accounts):

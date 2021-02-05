@@ -260,6 +260,7 @@ contract Strategy is BaseStrategy {
         
 
         if(amountFromVault > yvhCRV.balanceOf(address(this))){
+
             amountFromVault = yvhCRV.balanceOf(address(this));
             //this is not loss. so we amend amount
 
@@ -267,7 +268,7 @@ contract Strategy is BaseStrategy {
             _amount = _amountOfCrv.mul(virtualPrice).div(1e18);
         }
 
-        yvhCRV.withdraw(_amount);
+        yvhCRV.withdraw(amountFromVault);
         uint256 toWithdraw = hCRV.balanceOf(address(this)).sub(crvBeforeBalance);
  
         curvePool.remove_liquidity_one_coin(toWithdraw, curveId, toWithdraw.mul(DENOMINATOR.sub(slippageProtection)).div(DENOMINATOR));
