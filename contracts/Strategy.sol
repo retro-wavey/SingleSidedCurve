@@ -41,16 +41,13 @@ contract Strategy is BaseStrategy {
 
     uint256 public lastInvest = 0;
     uint256 public minTimePerInvest = 3600;
-    uint256 public maxSingleInvest = 2*1e18; // 2 hbtc per hour default
+    uint256 public maxSingleInvest = 2*1e8; // 2 hbtc per hour default
     uint256 public slippageProtectionIn = 50; //out of 10000. 50 = 0.5%
     uint256 public slippageProtectionOut = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10000;
     uint8 private immutable want_decimals;
 
-
     int128 public curveId;
-
-
 
     constructor(address _vault) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
@@ -75,7 +72,7 @@ contract Strategy is BaseStrategy {
 
     function name() external override view returns (string memory) {
         // Add your own name here, suggestion e.g. "StrategyCreamYFI"
-        return string(abi.encodePacked("SingleSidedCrv"));
+        return string(abi.encodePacked("SingleSidedCrv", IERC20Extended(address(want)).symbol()));
     }
 
     function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyGovernance {

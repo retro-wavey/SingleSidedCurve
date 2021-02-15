@@ -28,6 +28,11 @@ def test_wbtc_1(wbtc, curvePool,Strategy, hCRV,yvault, orb,rewards,chain,yhbtcst
     whale_deposit  = 2 *1e8
     vault.deposit(whale_deposit, {"from": whale})
     strategy.harvest({'from': strategist})
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+    chain.sleep(1000)
+    chain.mine(1)
+    strategy.harvest({'from': strategist})
 
     #print(strategy.curveTokenToWant(1e8))
     #print(yvault.totalSupply())
@@ -40,7 +45,7 @@ def test_wbtc_1(wbtc, curvePool,Strategy, hCRV,yvault, orb,rewards,chain,yhbtcst
     #genericStateOfStrat(strategy, currency, vault)
     #genericStateOfVault(vault, currency)
 
-    chain.sleep(2592000)
+    chain.sleep(2591000)
     chain.mine(1)
     yhbtcstrategy.harvest({'from': orb})
     strategy.harvest({'from': strategist})
