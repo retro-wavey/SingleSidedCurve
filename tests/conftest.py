@@ -12,7 +12,12 @@ def currency(interface):
     yield interface.ERC20('0x0316EB71485b0Ab14103307bf65a021042c6d380')
 
 @pytest.fixture
-def whale(accounts, web3, currency, chain):
+def wbtc(interface):
+    #this one is hbtc
+    yield interface.ERC20('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
+
+@pytest.fixture
+def whale(accounts, web3, currency, chain, wbtc):
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
@@ -20,8 +25,16 @@ def whale(accounts, web3, currency, chain):
     #big huboi wallet
     acc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
 
+    #wbtc account
+    wb = accounts.at('0x3dfd23A6c5E8BbcFc9581d2E864a68feb6a076d3', force=True)
+    wbtc.transfer(acc, wbtc.balanceOf(wb),  {'from': wb})
+
+
+
     assert currency.balanceOf(acc)  > 0
+    assert wbtc.balanceOf(acc)  > 0
     yield acc
+
 
 @pytest.fixture
 def yvault(interface):
@@ -92,7 +105,15 @@ def vault(pm, gov, rewards, guardian, currency):
     vault.initialize(currency, gov, rewards, "", "", guardian)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
-
+    
+@pytest.fixture
+def wbtc_vault(pm, gov, rewards, guardian, wbtc):
+    currency = wbtc
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian)
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
 
 @pytest.fixture
 def strategist(accounts):

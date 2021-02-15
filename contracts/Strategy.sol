@@ -6,6 +6,7 @@ import "./interfaces/curve/Curve.sol";
 import "./interfaces/curve/Gauge.sol";
 import "./interfaces/curve/IMinter.sol";
 import "./interfaces/curve/ICrvV3.sol";
+import "./interfaces/erc20/IERC20Extended.sol";
 import "./interfaces/Yearn/IVaultV1.sol";
 import "./interfaces/UniswapInterfaces/IUniswapV2Router02.sol";
 
@@ -41,8 +42,10 @@ contract Strategy is BaseStrategy {
     uint256 public lastInvest = 0;
     uint256 public minTimePerInvest = 3600;
     uint256 public maxSingleInvest = 2*1e18; // 2 hbtc per hour default
-    uint256 public slippageProtection = 50; //out of 10000. 50 = 0.5%
+    uint256 public slippageProtectionIn = 50; //out of 10000. 50 = 0.5%
+    uint256 public slippageProtectionOut = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10000;
+    uint8 private immutable want_decimals;
 
 
     int128 public curveId;
@@ -51,9 +54,10 @@ contract Strategy is BaseStrategy {
 
     constructor(address _vault) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
-         maxReportDelay = 6300;
+        maxReportDelay = 6300;
         profitFactor = 1500;
         debtThreshold = 100*1e18;
+        want_decimals = IERC20Extended(_vault).decimals();
 
         want.safeApprove(address(curvePool), uint256(-1));
         hCRV.approve(address(yvhCRV), uint256(-1));
@@ -65,6 +69,7 @@ contract Strategy is BaseStrategy {
         }else{
             require(false, "Coin not found");
         }
+
     }
 
 
@@ -79,8 +84,11 @@ contract Strategy is BaseStrategy {
     function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyGovernance {
         maxSingleInvest = _maxSingleInvest;
     }
-    function updateSlippageProtection(uint256 _slippageProtection) public onlyGovernance {
-        slippageProtection = _slippageProtection;
+    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyGovernance {
+        slippageProtectionIn = _slippageProtectionIn;
+    }
+    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyGovernance {
+        slippageProtectionOut = _slippageProtectionOut;
     }
 
     function estimatedTotalAssets() public override view returns (uint256) {
@@ -88,7 +96,7 @@ contract Strategy is BaseStrategy {
         return want.balanceOf(address(this)).add(curveTokenToWant(totalCurveTokens));
     }
 
-    // returns value of total 3pool
+    // returns value of total
     function curveTokenToWant(uint256 tokens) public view returns (uint256) {
         if(tokens == 0){
             return 0;
@@ -96,12 +104,22 @@ contract Strategy is BaseStrategy {
 
         //we want to choose lower value of virtual price and amount we really get out
         //this means we will always underestimate current assets. 
-        uint256 virtualOut = curvePool.get_virtual_price().mul(tokens).div(1e18);
+        uint256 virtualOut = virtualPriceToWant().mul(tokens).div(1e18);
 
         uint256 realOut = curvePool.calc_withdraw_one_coin(tokens, curveId);
 
         return Math.min(virtualOut, realOut);
         //return realOut;
+    }
+
+    //we lose some precision here. but it shouldnt matter as we are underestimating
+    function virtualPriceToWant() public view returns (uint256) {
+        if(want_decimals < 18){
+            return curvePool.get_virtual_price().div(10 ** (uint256(uint8(18) - want_decimals)));
+        }else{
+            return curvePool.get_virtual_price();
+        }
+
     }
 
     function curveTokensInYVault() public view returns (uint256) {
@@ -178,8 +196,8 @@ contract Strategy is BaseStrategy {
     }
 
     function _checkSlip(uint256 _wantToInvest) private view returns (bool){
-        uint256 expectedOut = _wantToInvest.mul(1e18).div(curvePool.get_virtual_price());
-        uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtection)).div(DENOMINATOR);
+        uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
+        uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
 
         uint256[2] memory amounts; 
 
@@ -250,7 +268,7 @@ contract Strategy is BaseStrategy {
         uint256 wantBalanceBefore = want.balanceOf(address(this));
 
         //let's take the amount we need if virtual price is real. Let's add the 
-        uint256 virtualPrice = curvePool.get_virtual_price();
+        uint256 virtualPrice = virtualPriceToWant();
         uint256 amountWeNeedFromVirtualPrice = _amount.mul(1e18).div(virtualPrice);
 
         uint256 crvBeforeBalance = hCRV.balanceOf(address(this)); //should be zero but just incase...
@@ -270,8 +288,14 @@ contract Strategy is BaseStrategy {
 
         yvhCRV.withdraw(amountFromVault);
         uint256 toWithdraw = hCRV.balanceOf(address(this)).sub(crvBeforeBalance);
+
+        //if we have less than 18 decimals we need to lower the amount out
+        uint256 maxSlippage = toWithdraw.mul(DENOMINATOR.sub(slippageProtectionOut)).div(DENOMINATOR);
+        if(want_decimals < 18){
+            maxSlippage = maxSlippage.div(10 ** (uint256(uint8(18) - want_decimals)));
+        }
  
-        curvePool.remove_liquidity_one_coin(toWithdraw, curveId, toWithdraw.mul(DENOMINATOR.sub(slippageProtection)).div(DENOMINATOR));
+        curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
 
         uint256 diff = want.balanceOf(address(this)).sub(wantBalanceBefore);
 
