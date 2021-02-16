@@ -53,6 +53,7 @@ contract Strategy is BaseStrategy {
         // You can set these parameters on deployment to whatever you want
         maxReportDelay = 6300;
         profitFactor = 1500;
+        minReportDelay = 3600;
         debtThreshold = 100*1e18;
         want_decimals = IERC20Extended(_vault).decimals();
 

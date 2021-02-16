@@ -15,7 +15,7 @@ import brownie
 def test_hbtc_1(currency,strategy,curvePool, hCRV,yvault, orb,rewards,chain,yhbtcstrategy,vault, ychad, whale,gov,strategist, interface):
 
     debt_ratio = 10_000
-    vault.addStrategy(strategy, debt_ratio, 0, 1000, {"from": gov})
+    vault.addStrategy(strategy, debt_ratio,0, 2 ** 256 - 1, 1000, {"from": gov})
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
 
@@ -60,7 +60,7 @@ def test_hbtc_1(currency,strategy,curvePool, hCRV,yvault, orb,rewards,chain,yhbt
 def test_migrate(currency,Strategy, ychad, strategy,yvault, chain,vault, whale,gov,strategist, interface):
     rate_limit = 1_000_000_000 *1e18
     debt_ratio = 10_000
-    vault.addStrategy(strategy, debt_ratio, rate_limit, 1000, {"from": gov})
+    vault.addStrategy(strategy, debt_ratio, 0, 2 ** 256 - 1, 1000, {"from": gov})
 
 
     currency.approve(vault, 2 ** 256 - 1, {"from": whale} )
@@ -79,7 +79,7 @@ def test_migrate(currency,Strategy, ychad, strategy,yvault, chain,vault, whale,g
 def test_reduce_limit(currency,Strategy, strategy, chain,vault, whale,gov,strategist, interface):
     rate_limit = 1_000_000_000 *1e18
     debt_ratio = 10_000
-    vault.addStrategy(strategy, debt_ratio, rate_limit, 1000, {"from": gov})
+    vault.addStrategy(strategy, debt_ratio, 0, 2 ** 256 - 1, 1000, {"from": gov})
 
     currency.approve(vault, 2 ** 256 - 1, {"from": whale} )
     whale_deposit  = 100 *1e18

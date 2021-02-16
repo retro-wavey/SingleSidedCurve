@@ -18,7 +18,7 @@ def test_wbtc_1(wbtc, curvePool,Strategy, hCRV,yvault, orb,rewards,chain,yhbtcst
     strategy = strategist.deploy(Strategy, vault)
     currency = wbtc
     debt_ratio = 10_000
-    vault.addStrategy(strategy, debt_ratio, 0, 1000, {"from": gov})
+    vault.addStrategy(strategy, debt_ratio, 0, 2 ** 256 - 1, 1000, {"from": gov})
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
 
@@ -53,6 +53,8 @@ def test_wbtc_1(wbtc, curvePool,Strategy, hCRV,yvault, orb,rewards,chain,yhbtcst
     genericStateOfVault(vault, currency)
 
     print("\nEstimated APR: ", "{:.2%}".format(((vault.totalAssets()-2*1e8)*12)/(2*1e8)))
+    chain.sleep(21600) # wait six hours so we get full harvest
+    chain.mine(1)
 
     vault.withdraw(vault.balanceOf(whale), whale, 100, {"from": whale})
     vault.withdraw(vault.balanceOf(strategist), strategist, 100, {"from": strategist})
