@@ -116,6 +116,15 @@ def wbtc_vault(pm, gov, rewards, guardian, wbtc):
     yield vault
 
 @pytest.fixture
+def live_wbtc_vault(pm, gov, rewards, guardian, wbtc):
+    currency = wbtc
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian)
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
+@pytest.fixture
 def strategist(accounts):
     # You! Our new Strategist!
     yield accounts[3]

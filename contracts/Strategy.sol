@@ -30,8 +30,6 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
-    address private uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-
     ICurveFi public curvePool =  ICurveFi(address(0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F));
     ICrvV3 public hCRV = ICrvV3(address(0xb19059ebb43466C323583928285a49f558E572Fd));
 
