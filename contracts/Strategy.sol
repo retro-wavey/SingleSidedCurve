@@ -3,12 +3,9 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "./interfaces/curve/Curve.sol";
-import "./interfaces/curve/Gauge.sol";
-import "./interfaces/curve/IMinter.sol";
 import "./interfaces/curve/ICrvV3.sol";
 import "./interfaces/erc20/IERC20Extended.sol";
 import "./interfaces/Yearn/IVaultV1.sol";
-import "./interfaces/UniswapInterfaces/IUniswapV2Router02.sol";
 
 // These are the core Yearn libraries
 import {
