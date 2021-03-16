@@ -17,6 +17,12 @@ def wbtc(interface):
     yield interface.ERC20('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
 
 @pytest.fixture
+def usdt(interface):
+    #this one is hbtc
+    yield interface.ERC20('0xdAC17F958D2ee523a2206206994597C13D831ec7')
+
+
+@pytest.fixture
 def whale(accounts, web3, currency, chain, wbtc):
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
@@ -49,6 +55,15 @@ def hCRV(interface):
 @pytest.fixture
 def curvePool(interface):
     yield interface.ICurveFi('0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F')
+
+@pytest.fixture
+def ibCurvePool(interface):
+    yield interface.ICurveFi('0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF')
+
+@pytest.fixture
+def ib3CRV(interface):
+    yield interface.ICrvV3('0x5282a4eF67D9C33135340fB3289cc1711c13638C')
+    
 
 @pytest.fixture
 def devms(accounts):
@@ -146,6 +161,18 @@ def live_vault(pm):
     Vault = pm(config["dependencies"][0]).Vault
     vault = Vault.at('0xdCD90C7f6324cfa40d7169ef80b12031770B4325')
     yield vault
+
+@pytest.fixture
+def live_usdt_vault(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0xAf322a2eDf31490250fdEb0D712621484b09aBB6')
+    yield vault
+
+@pytest.fixture
+def strategy_usdt_ib(strategist, keeper, live_usdt_vault, Strategy):
+    strategy = strategist.deploy(Strategy, vault, 500_000*1e6, 3600, 50, 50, )
+    strategy.setKeeper(keeper)
+    yield strategy
 
 @pytest.fixture
 def strategy(strategist, keeper, vault, Strategy):
