@@ -43,12 +43,18 @@ def test_hbtc_1(currency,strategy,curvePool, hCRV,yvault, orb,rewards,chain,yhbt
 
     print("\nEstimated APR: ", "{:.2%}".format(((vault.totalAssets()-2*1e18)*12)/(2*1e18)))
 
+    chain.sleep(21600)
+    chain.mine(1)
+
+
+    vault.transferFrom(strategy, strategist, vault.balanceOf(strategy), {"from": strategist})
+    print("\nWithdraw")
     vault.withdraw(vault.balanceOf(whale), whale, 100, {"from": whale})
     vault.withdraw(vault.balanceOf(strategist), strategist, 100, {"from": strategist})
 
     #vault.withdraw(vault.balanceOf(rewards), rewards, 100, {"from": rewards})
 
-    print("\nWithdraw")
+
     #genericStateOfStrat(strategy, currency, vault)
     #genericStateOfVault(vault, currency)
     balanceAfter = currency.balanceOf(whale)
@@ -70,7 +76,7 @@ def test_migrate(currency,Strategy, ychad, strategy,yvault, chain,vault, whale,g
 
     yvault.earn({'from': ychad})
 
-    strategy2 = strategist.deploy(Strategy, vault)
+    strategy2 = strategist.deploy(Strategy, vault, 2*1e8)
     vault.migrateStrategy(strategy, strategy2, {'from': gov})
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfStrat(strategy2, currency, vault)

@@ -15,7 +15,7 @@ import brownie
 def test_wbtc_1(wbtc, curvePool,Strategy, hCRV,yvault, orb,rewards,chain,yhbtcstrategy,wbtc_vault, ychad, whale,gov,strategist, interface):
 
     vault = wbtc_vault
-    strategy = strategist.deploy(Strategy, vault)
+    strategy = strategist.deploy(Strategy, vault, 2*1e8)
     currency = wbtc
     debt_ratio = 10_000
     vault.addStrategy(strategy, debt_ratio, 0, 2 ** 256 - 1, 1000, {"from": gov})
@@ -72,7 +72,7 @@ def test_wbtc_1(wbtc, curvePool,Strategy, hCRV,yvault, orb,rewards,chain,yhbtcst
 def test_wbtc_live_vault(wbtc, curvePool,Strategy, hCRV,yvault, orb,rewards,chain,yhbtcstrategy,wbtc_vault, ychad, whale,gov,strategist, interface):
 
     vault = wbtc_vault
-    strategy = strategist.deploy(Strategy, vault)
+    strategy = strategist.deploy(Strategy, vault, 2*1e8)
     currency = wbtc
     debt_ratio = 10_000
     vault.addStrategy(strategy, debt_ratio, 0, 2 ** 256 - 1, 1000, {"from": gov})

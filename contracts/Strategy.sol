@@ -36,7 +36,7 @@ contract Strategy is BaseStrategy {
 
     uint256 public lastInvest = 0;
     uint256 public minTimePerInvest = 3600;
-    uint256 public maxSingleInvest = 2*1e8; // 2 hbtc per hour default
+    uint256 public maxSingleInvest; // 2 hbtc per hour default
     uint256 public slippageProtectionIn = 50; //out of 10000. 50 = 0.5%
     uint256 public slippageProtectionOut = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10000;
@@ -44,8 +44,9 @@ contract Strategy is BaseStrategy {
 
     int128 public curveId;
 
-    constructor(address _vault) public BaseStrategy(_vault) {
+    constructor(address _vault, uint256 _maxSingleInvest) public BaseStrategy(_vault) {
         // You can set these parameters on deployment to whatever you want
+        maxSingleInvest = _maxSingleInvest;
         maxReportDelay = 6300;
         profitFactor = 1500;
         minReportDelay = 3600;

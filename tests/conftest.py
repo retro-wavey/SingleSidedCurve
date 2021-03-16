@@ -149,7 +149,7 @@ def live_vault(pm):
 
 @pytest.fixture
 def strategy(strategist, keeper, vault, Strategy):
-    strategy = strategist.deploy(Strategy, vault)
+    strategy = strategist.deploy(Strategy, vault, 2*1e18)
     strategy.setKeeper(keeper)
     yield strategy
 
