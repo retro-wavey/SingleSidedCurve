@@ -60,14 +60,13 @@ contract Strategy is BaseStrategy {
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
-        uint256 _slippageProtectionOut,
         address _curvePool,
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
         bool _hasUnderlying
     ) public BaseStrategy(_vault) {
-         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _slippageProtectionOut, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
     }
 
     function initialize(
@@ -78,7 +77,6 @@ contract Strategy is BaseStrategy {
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
-        uint256 _slippageProtectionOut,
         address _curvePool,
         address _curveToken,
         address _yvToken,
@@ -87,14 +85,13 @@ contract Strategy is BaseStrategy {
     ) external {
         //note: initialise can only be called once. in _initialize in BaseStrategy we have: require(address(want) == address(0), "Strategy already initialized");
         _initialize(_vault, _strategist, _rewards, _keeper);
-        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _slippageProtectionOut, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
     }
 
     function _initializeStrat(
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
-        uint256 _slippageProtectionOut,
         address _curvePool,
         address _curveToken,
         address _yvToken,
@@ -102,43 +99,47 @@ contract Strategy is BaseStrategy {
         bool _hasUnderlying
     ) internal {
         require(want_decimals == 0, "Already Initialized");
+        require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
+        
+        curvePool = ICurveFi(_curvePool);
 
-        maxReportDelay = 86400;
-        profitFactor = 1500;
-        minReportDelay = 3600;
-        debtThreshold = 100*1e18;
+        if(curvePool.coins(0) == address(want) || (_hasUnderlying && curvePool.underlying_coins(0) == address(want) )){
+            curveId =0;
+        }else if ( curvePool.coins(1) == address(want) || (_hasUnderlying && curvePool.underlying_coins(1) == address(want) )){
+            curveId =1;
+        }else if ( curvePool.coins(2) == address(want) || (_hasUnderlying && curvePool.underlying_coins(2) == address(want) )){
+            curveId =2;
+        }else if ( curvePool.coins(3) == address(want) || (_hasUnderlying && curvePool.underlying_coins(3) == address(want) )){
+            //will revert if there are not enough coins
+           curveId =3;
+        }else{
+            require(false, "incorrect want for curve pool");
+        }
 
         maxSingleInvest = _maxSingleInvest;
         minTimePerInvest = _minTimePerInvest;
         slippageProtectionIn = _slippageProtectionIn;
-        slippageProtectionOut = _slippageProtectionOut;
+        slippageProtectionOut = _slippageProtectionIn; // use In to start with to save on stack
 
-        require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
-        withdrawProtection = true;
         poolSize = _poolSize;
         hasUnderlying = _hasUnderlying;
 
         yvToken = IVaultV2(_yvToken);
         curveToken = ICrvV3(_curveToken);
-        curvePool = ICurveFi(_curvePool);
 
+        _setupStatics();
+        
+    }
+    function _setupStatics() internal {
+        maxReportDelay = 86400;
+        profitFactor = 1500;
+        minReportDelay = 3600;
+        debtThreshold = 100*1e18;
+        withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
 
         want.safeApprove(address(curvePool), uint256(-1));
         curveToken.approve(address(yvToken), uint256(-1));
-
-        if(curvePool.coins(0) == address(want)){
-            curveId =0;
-        }else if ( curvePool.coins(1) == address(want)){
-            curveId =1;
-        }else if ( curvePool.coins(2) == address(want)){
-            curveId =2;
-        }else if ( curvePool.coins(3) == address(want)){
-            //will revert if there are not enough coins
-            curveId =3;
-        }else{
-            require(false, "incorrect want for curve pool");
-        }
     }
 
 

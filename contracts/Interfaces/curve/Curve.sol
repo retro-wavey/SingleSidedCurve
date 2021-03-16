@@ -45,6 +45,7 @@ interface ICurveFi {
     ) external payable;
 
     function coins(uint256) external returns (address);
+    function underlying_coins(uint256) external returns (address);
 
     function remove_liquidity_imbalance(uint256[2] calldata amounts, uint256 max_burn_amount) external;
 

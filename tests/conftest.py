@@ -47,6 +47,10 @@ def yvault(interface):
     yield interface.IVaultV1('0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5')
 
 @pytest.fixture
+def ibyvault(Vault):
+    yield Vault.at('0x27b7b1ad7288079A66d12350c828D3C00A6F07d7')
+
+@pytest.fixture
 def yhbtcstrategy(interface):
     yield interface.IStratV1('0xE02363cB1e4E1B77a74fAf38F3Dbb7d0B70F26D7')
 @pytest.fixture
@@ -68,6 +72,11 @@ def ib3CRV(interface):
 @pytest.fixture
 def devms(accounts):
     acc = accounts.at('0x846e211e8ba920B353FB717631C015cf04061Cc9', force=True)
+    yield acc
+
+@pytest.fixture
+def stratms(accounts):
+    acc = accounts.at('0x16388463d60FFE0661Cf7F1f31a7D658aC790ff7', force=True)
     yield acc
 @pytest.fixture
 def orb(accounts):
@@ -111,6 +120,10 @@ def rewards(gov):
 def guardian(accounts):
     # YFI Whale, probably
     yield accounts[2]
+
+@pytest.fixture
+def Vault(pm):
+    yield pm(config["dependencies"][0]).Vault
 
 
 @pytest.fixture
@@ -169,8 +182,8 @@ def live_usdt_vault(pm):
     yield vault
 
 @pytest.fixture
-def strategy_usdt_ib(strategist, keeper, live_usdt_vault, Strategy):
-    strategy = strategist.deploy(Strategy, vault, 500_000*1e6, 3600, 50, 50, )
+def strategy_usdt_ib(strategist, keeper, live_usdt_vault, Strategy, ibCurvePool, ib3CRV, ibyvault):
+    strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 50, ibCurvePool, ib3CRV, ibyvault,3, True)
     strategy.setKeeper(keeper)
     yield strategy
 
