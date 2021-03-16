@@ -23,6 +23,27 @@ interface ICurveFi {
         uint256 min_mint_amount
     ) external payable;
 
+    function add_liquidity(
+        // sBTC pool
+        uint256[3] calldata amounts,
+        uint256 min_mint_amount,
+        bool use_underlying
+    ) external;
+
+    function add_liquidity(
+        // bUSD pool
+        uint256[4] calldata amounts,
+        uint256 min_mint_amount,
+        bool use_underlying
+    ) external;
+
+    function add_liquidity(
+        // stETH pool
+        uint256[2] calldata amounts,
+        uint256 min_mint_amount,
+        bool use_underlying
+    ) external payable;
+
     function coins(uint256) external returns (address);
 
     function remove_liquidity_imbalance(uint256[2] calldata amounts, uint256 max_burn_amount) external;
@@ -31,10 +52,19 @@ interface ICurveFi {
 
     function calc_withdraw_one_coin(uint256 _amount, int128 i) external view returns (uint256);
 
+    function calc_withdraw_one_coin(uint256 _amount, int128 i, bool use_underlying) external view returns (uint256);
+
     function remove_liquidity_one_coin(
         uint256 _token_amount,
         int128 i,
         uint256 min_amount
+    ) external;
+
+    function remove_liquidity_one_coin(
+        uint256 _token_amount,
+        int128 i,
+        uint256 min_amount,
+        bool use_underlying
     ) external;
 
     function exchange(
@@ -53,6 +83,8 @@ interface ICurveFi {
     ) external view returns (uint256);
 
     function calc_token_amount( uint256[2] calldata amounts, bool is_deposit) external view returns (uint256);
+    function calc_token_amount( uint256[3] calldata amounts, bool is_deposit) external view returns (uint256);
+    function calc_token_amount( uint256[4] calldata amounts, bool is_deposit) external view returns (uint256);
 }
 
 interface Zap {
