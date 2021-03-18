@@ -183,7 +183,7 @@ def live_usdt_vault(pm):
 
 @pytest.fixture
 def strategy_usdt_ib(strategist, keeper, live_usdt_vault, Strategy, ibCurvePool, ib3CRV, ibyvault):
-    strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 50, ibCurvePool, ib3CRV, ibyvault,3, True)
+    strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
     strategy.setKeeper(keeper)
     yield strategy
 

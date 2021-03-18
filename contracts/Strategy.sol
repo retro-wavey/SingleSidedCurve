@@ -40,6 +40,7 @@ contract Strategy is BaseStrategy {
     address public constant uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
     IVaultV2 public yvToken;// = IVaultV1(address(0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5));
+    IERC20Extended public middleToken; // the token between bluechip and curve pool
 
     uint256 public lastInvest = 0;
     uint256 public minTimePerInvest;// = 3600;
@@ -47,7 +48,9 @@ contract Strategy is BaseStrategy {
     uint256 public slippageProtectionIn;// = 50; //out of 10000. 50 = 0.5%
     uint256 public slippageProtectionOut;// = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10000;
+
     uint8 private want_decimals;
+    uint8 private middle_decimals;
 
     int128 public curveId;
     uint256 public poolSize;
@@ -114,6 +117,11 @@ contract Strategy is BaseStrategy {
            curveId =3;
         }else{
             require(false, "incorrect want for curve pool");
+        }
+
+        if(_hasUnderlying){
+            middleToken = IERC20Extended(curvePool.coins(uint256(curveId)));
+            middle_decimals = middleToken.decimals();
         }
 
         maxSingleInvest = _maxSingleInvest;
@@ -191,6 +199,14 @@ contract Strategy is BaseStrategy {
     function virtualPriceToWant() public view returns (uint256) {
         if(want_decimals < 18){
             return curvePool.get_virtual_price().div(10 ** (uint256(uint8(18) - want_decimals)));
+        }else{
+            return curvePool.get_virtual_price();
+        }
+
+    }
+    function virtualPriceToMiddle() public view returns (uint256) {
+        if(middle_decimals < 18){
+            return curvePool.get_virtual_price().div(10 ** (uint256(uint8(18) - middle_decimals)));
         }else{
             return curvePool.get_virtual_price();
         }
@@ -295,7 +311,20 @@ contract Strategy is BaseStrategy {
     }
 
     function _checkSlip(uint256 _wantToInvest) private view returns (bool){
-        uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
+
+        //convertToMiddle
+        if(hasUnderlying){
+            if(want_decimals > middle_decimals){
+                _wantToInvest = _wantToInvest.div(10 ** uint256(want_decimals - middle_decimals));
+
+            }else if (want_decimals < middle_decimals){
+                _wantToInvest = _wantToInvest.mul(10 ** uint256(middle_decimals - want_decimals));
+            }
+        }
+
+        uint256 vp = hasUnderlying ? virtualPriceToMiddle() : virtualPriceToWant();
+        uint256 expectedOut = _wantToInvest.mul(1e18).div(vp);
+        
         uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
 
         uint256 roughOut;
@@ -303,7 +332,7 @@ contract Strategy is BaseStrategy {
         if(poolSize == 2){
             uint256[2] memory amounts; 
             amounts[uint256(curveId)] = _wantToInvest;
-            //note doesnt take into account underlying
+            //note doesnt take into account underlying 
             roughOut = curvePool.calc_token_amount(amounts, true);
    
         }else if (poolSize == 3){
@@ -373,6 +402,8 @@ contract Strategy is BaseStrategy {
                 yvToken.deposit();
 
                 lastInvest = block.timestamp;
+            }else{
+                require(false, "quee");
             }
 
             /*if(curveId == 0){
