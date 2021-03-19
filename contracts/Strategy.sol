@@ -324,7 +324,6 @@ contract Strategy is BaseStrategy {
 
     function _ethToWant(uint256 _amount) internal view returns (uint256) {
         address[] memory path = new address[](2);
-        path = new address[](2);
         path[0] = weth;
         path[1] = address(want);
 
