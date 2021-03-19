@@ -5,12 +5,9 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/curve/Curve.sol";
 import "./interfaces/curve/ICrvV3.sol";
 import "./interfaces/erc20/IERC20Extended.sol";
-import "./interfaces/Yearn/IVaultV2.sol";
 
 // These are the core Yearn libraries
-import {
-    BaseStrategy
-} from "@yearnvaults/contracts/BaseStrategy.sol";
+import "@yearnvaults/contracts/BaseStrategy.sol";
 
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -39,8 +36,8 @@ contract Strategy is BaseStrategy {
     address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address public constant uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
-    IVaultV2 public yvToken;// = IVaultV1(address(0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5));
-    IERC20Extended public middleToken; // the token between bluechip and curve pool
+    VaultAPI public yvToken;// = IVaultV1(address(0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5));
+    //IERC20Extended public middleToken; // the token between bluechip and curve pool
 
     uint256 public lastInvest = 0;
     uint256 public minTimePerInvest;// = 3600;
@@ -119,10 +116,10 @@ contract Strategy is BaseStrategy {
             require(false, "incorrect want for curve pool");
         }
 
-        if(_hasUnderlying){
+        /*if(_hasUnderlying){
             middleToken = IERC20Extended(curvePool.coins(uint256(curveId)));
             middle_decimals = middleToken.decimals();
-        }
+        }*/
 
         maxSingleInvest = _maxSingleInvest;
         minTimePerInvest = _minTimePerInvest;
@@ -132,7 +129,7 @@ contract Strategy is BaseStrategy {
         poolSize = _poolSize;
         hasUnderlying = _hasUnderlying;
 
-        yvToken = IVaultV2(_yvToken);
+        yvToken = VaultAPI(_yvToken);
         curveToken = ICrvV3(_curveToken);
 
         _setupStatics();
@@ -148,6 +145,38 @@ contract Strategy is BaseStrategy {
 
         want.safeApprove(address(curvePool), uint256(-1));
         curveToken.approve(address(yvToken), uint256(-1));
+    }
+
+    event Cloned(address indexed clone);
+    function cloneSingleSidedCurve(
+        address _vault,
+        address _strategist,
+        address _rewards,
+        address _keeper,
+        uint256 _maxSingleInvest,
+        uint256 _minTimePerInvest,
+        uint256 _slippageProtectionIn,
+        address _curvePool,
+        address _curveToken,
+        address _yvToken,
+        uint256 _poolSize,
+        bool _hasUnderlying
+    ) external returns (address newStrategy){
+         bytes20 addressBytes = bytes20(address(this));
+
+        assembly {
+            // EIP-1167 bytecode
+            let clone_code := mload(0x40)
+            mstore(clone_code, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
+            mstore(add(clone_code, 0x14), addressBytes)
+            mstore(add(clone_code, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
+            newStrategy := create(0, clone_code, 0x37)
+        }
+
+        Strategy(newStrategy).initialize(_vault, _strategist, _rewards, _keeper, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+
+        emit Cloned(newStrategy);
+
     }
 
 
@@ -168,6 +197,10 @@ contract Strategy is BaseStrategy {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
+
+    function delegatedAssets() public override view returns (uint256) {
+        return Math.min(curveTokenToWant(curveTokensInYVault()), vault.strategies(address(this)).totalDebt);
+    }
     function estimatedTotalAssets() public override view returns (uint256) {
         uint256 totalCurveTokens = curveTokensInYVault().add(curveToken.balanceOf(address(this)));
         return want.balanceOf(address(this)).add(curveTokenToWant(totalCurveTokens));
@@ -204,14 +237,14 @@ contract Strategy is BaseStrategy {
         }
 
     }
-    function virtualPriceToMiddle() public view returns (uint256) {
+    /*function virtualPriceToMiddle() public view returns (uint256) {
         if(middle_decimals < 18){
             return curvePool.get_virtual_price().div(10 ** (uint256(uint8(18) - middle_decimals)));
         }else{
             return curvePool.get_virtual_price();
         }
 
-    }
+    }*/
 
     function curveTokensInYVault() public view returns (uint256) {
         uint256 balance = yvToken.balanceOf(address(this));
@@ -306,12 +339,13 @@ contract Strategy is BaseStrategy {
         uint256 _wantToInvest = Math.min(wantBal, maxSingleInvest);
 
         if(lastInvest.add(minTimePerInvest) < block.timestamp &&  _wantToInvest > 1 && _checkSlip(_wantToInvest)){
-            return true;
+            //return true;
         }
     }
 
-    function _checkSlip(uint256 _wantToInvest) private view returns (bool){
-
+    function _checkSlip(uint256 _wantToInvest) public view returns (bool){
+        return true;
+        /*
         //convertToMiddle
         if(hasUnderlying){
             if(want_decimals > middle_decimals){
@@ -322,7 +356,7 @@ contract Strategy is BaseStrategy {
             }
         }
 
-        uint256 vp = hasUnderlying ? virtualPriceToMiddle() : virtualPriceToWant();
+        uint256 vp = virtualPriceToWant();
         uint256 expectedOut = _wantToInvest.mul(1e18).div(vp);
         
         uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
@@ -350,7 +384,7 @@ contract Strategy is BaseStrategy {
 
         if(roughOut >= maxSlip){
             return true;
-        }
+        }*/
     }
 
 
@@ -367,32 +401,36 @@ contract Strategy is BaseStrategy {
             //add to curve (single sided)
             if(_checkSlip(_wantToInvest)){
 
+                uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
+        
+                uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
+
                 //pool size cannot be more than 4 or less than 2
                 if(poolSize == 2){
                     uint256[2] memory amounts; 
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
-                        curvePool.add_liquidity(amounts, 0, true);
+                        curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
-                        curvePool.add_liquidity(amounts, 0);
+                        curvePool.add_liquidity(amounts, maxSlip);
                     }
    
                 }else if (poolSize == 3){
                     uint256[3] memory amounts; 
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
-                        curvePool.add_liquidity(amounts, 0, true);
+                        curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
-                        curvePool.add_liquidity(amounts, 0);
+                        curvePool.add_liquidity(amounts, maxSlip);
                     }
                     
                 }else{
                     uint256[4] memory amounts; 
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
-                        curvePool.add_liquidity(amounts, 0, true);
+                        curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
-                        curvePool.add_liquidity(amounts, 0);
+                        curvePool.add_liquidity(amounts, maxSlip);
                     }
                     
                 }
