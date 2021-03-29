@@ -13,7 +13,7 @@ import brownie
 #           - strategy operation at different loading levels (anticipated and "extreme")
 
 def test_hbtc_1(currency,strategy,curvePool, hCRV,yvault, orb,rewards,chain,yhbtcstrategy,vault, ychad, whale,gov,strategist, interface):
-
+    decimals = currency.decimals()
     debt_ratio = 10_000
     vault.addStrategy(strategy, debt_ratio,0, 2 ** 256 - 1, 1000, {"from": gov})
     vault.setManagementFee(0, {"from": gov})

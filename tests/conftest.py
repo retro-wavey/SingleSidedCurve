@@ -7,9 +7,16 @@ def andre(accounts):
     yield accounts[0]
 
 @pytest.fixture
-def currency(interface):
+def currency(interface, usdt):
     #this one is hbtc
-    yield interface.ERC20('0x0316EB71485b0Ab14103307bf65a021042c6d380')
+    #yield interface.ERC20('0x0316EB71485b0Ab14103307bf65a021042c6d380')
+    yield usdt
+
+@pytest.fixture
+def live_vault_usdt(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0x32651dD149a6EC22734882F790cBEB21402663F9')
+    yield vault
 
 @pytest.fixture
 def wbtc(interface):
@@ -28,8 +35,9 @@ def whale(accounts, web3, currency, chain, wbtc):
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
     #acc = accounts.at('0x006d0f31a00e1f9c017ab039e9d0ba699433a28c', force=True)
+    acc = accounts.at("0xf977814e90da44bfa03b6295a0616a897441acec", force=True)
     #big huboi wallet
-    acc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
+    #acc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
 
     #wbtc account
     wb = accounts.at('0x3dfd23A6c5E8BbcFc9581d2E864a68feb6a076d3', force=True)
@@ -178,7 +186,7 @@ def live_vault(pm):
 @pytest.fixture
 def live_usdt_vault(pm):
     Vault = pm(config["dependencies"][0]).Vault
-    vault = Vault.at('0xAf322a2eDf31490250fdEb0D712621484b09aBB6')
+    vault = Vault.at('0x32651dD149a6EC22734882F790cBEB21402663F9')
     yield vault
 
 @pytest.fixture

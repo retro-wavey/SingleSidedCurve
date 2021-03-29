@@ -12,13 +12,13 @@ import brownie
 #           - change in loading (from low to high and high to low)
 #           - strategy operation at different loading levels (anticipated and "extreme")
 
-def test_opsss_lvie(currency,live_strategy, chain,live_vault, whale,gov, samdev,strategist, interface):
+def test_opsss_lvie(currency,live_strategy, chain,live_vault, gov, samdev,strategist, interface):
     strategy = live_strategy
     vault = live_vault
     strategist = samdev
     gov = samdev
 
-    currency.approve(vault, 2 ** 256 - 1, {"from": whale} )
+    #currency.approve(vault, 2 ** 256 - 1, {"from": whale} )
     #whalebefore = currency.balanceOf(whale)
    # whale_deposit  = 100 *1e18
     #vault.deposit(whale_deposit, {"from": whale})
