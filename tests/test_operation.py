@@ -12,8 +12,9 @@ import brownie
 #           - change in loading (from low to high and high to low)
 #           - strategy operation at different loading levels (anticipated and "extreme")
 
-def test_hbtc_1(currency,strategy,curvePool, hCRV,yvault, orb,rewards,chain,yhbtcstrategy,vault, ychad, whale,gov,strategist, interface):
-
+def test_hbtc_1(currency,strategy,curvePool, hCRV,yvaultv2, orb,rewards,chain,yhbtcstrategyv2,vault, ychad, whale,gov,strategist, interface):
+    yvault = yvaultv2
+    yvault.setDepositLimit(10_000 * 1e18, {'from': ychad})
     debt_ratio = 10_000
     vault.addStrategy(strategy, debt_ratio,0, 2 ** 256 - 1, 1000, {"from": gov})
     vault.setManagementFee(0, {"from": gov})
@@ -28,25 +29,31 @@ def test_hbtc_1(currency,strategy,curvePool, hCRV,yvault, orb,rewards,chain,yhbt
     #print(yvault.totalSupply())
     #assert strategy.curveTokensInYVault() == yvault.balanceOf(strategy)
     #print(yvault.balanceOf(strategy))
-    yvault.earn({'from': ychad})
+    #yvault.earn({'from': ychad})
+
+    yhbtcstrategyv2.harvest({'from': ychad})
     print(hCRV.balanceOf(yvault))
     #yhbtcstrategy.deposit()
     #genericStateOfStrat(strategy, currency, vault)
     #genericStateOfVault(vault, currency)
-
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
     chain.sleep(2592000)
     chain.mine(1)
-    yhbtcstrategy.harvest({'from': orb})
+
+    yhbtcstrategyv2.harvest({'from': orb})
+    
+
+    chain.sleep(21600)
+    chain.mine(1)
     strategy.harvest({'from': strategist})
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
 
     print("\nEstimated APR: ", "{:.2%}".format(((vault.totalAssets()-2*1e18)*12)/(2*1e18)))
-
     chain.sleep(21600)
     chain.mine(1)
-
-
+    
     vault.transferFrom(strategy, strategist, vault.balanceOf(strategy), {"from": strategist})
     print("\nWithdraw")
     vault.withdraw(vault.balanceOf(whale), whale, 100, {"from": whale})

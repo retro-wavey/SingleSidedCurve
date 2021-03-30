@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/curve/Curve.sol";
 import "./interfaces/curve/ICrvV3.sol";
 import "./interfaces/erc20/IERC20Extended.sol";
-import "./interfaces/Yearn/IVaultV1.sol";
+import "./interfaces/Yearn/IVaultV2.sol";
 
 // These are the core Yearn libraries
 import {
@@ -32,7 +32,7 @@ contract Strategy is BaseStrategy {
 
     address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    IVaultV1 public yvhCRV = IVaultV1(address(0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5));
+    IVaultV2 public yvhCRV = IVaultV2(address(0x625b7DF2fa8aBe21B0A976736CDa4775523aeD1E));
 
     uint256 public lastInvest = 0;
     uint256 public minTimePerInvest = 3600;
@@ -123,7 +123,7 @@ contract Strategy is BaseStrategy {
             //needed because of revert on priceperfullshare if 0
             return 0;
         }
-        uint256 pricePerShare = yvhCRV.getPricePerFullShare();
+        uint256 pricePerShare = yvhCRV.pricePerShare();
         return balance.mul(pricePerShare).div(1e18);
     }
 
@@ -233,7 +233,7 @@ contract Strategy is BaseStrategy {
             if(_checkSlip(_wantToInvest)){
                 curvePool.add_liquidity(amounts, 0);
                 //now add to yearn
-                yvhCRV.depositAll();
+                yvhCRV.deposit();
 
                 lastInvest = block.timestamp;
             }
@@ -267,7 +267,7 @@ contract Strategy is BaseStrategy {
 
         uint256 crvBeforeBalance = hCRV.balanceOf(address(this)); //should be zero but just incase...
 
-        uint256 pricePerFullShare = yvhCRV.getPricePerFullShare();
+        uint256 pricePerFullShare = yvhCRV.pricePerShare();
         uint256 amountFromVault = amountWeNeedFromVirtualPrice.mul(1e18).div(pricePerFullShare);
         
 

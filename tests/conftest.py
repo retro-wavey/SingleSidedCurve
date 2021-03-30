@@ -22,8 +22,8 @@ def whale(accounts, web3, currency, chain, wbtc):
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
     #acc = accounts.at('0x006d0f31a00e1f9c017ab039e9d0ba699433a28c', force=True)
-    #big huboi wallet
-    acc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
+    #big bridge wallet
+    acc = accounts.at('0xA929022c9107643515F5c777cE9a910F0D1e490C', force=True)
 
     #wbtc account
     wb = accounts.at('0x3dfd23A6c5E8BbcFc9581d2E864a68feb6a076d3', force=True)
@@ -37,12 +37,20 @@ def whale(accounts, web3, currency, chain, wbtc):
 
 
 @pytest.fixture
-def yvault(interface):
+def yvaultv1(interface):
     yield interface.IVaultV1('0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5')
+@pytest.fixture
+def yvaultv2(interface):
+    yield interface.IVaultV2('0x625b7DF2fa8aBe21B0A976736CDa4775523aeD1E')
 
 @pytest.fixture
-def yhbtcstrategy(interface):
+def yhbtcstrategyv1(interface):
     yield interface.IStratV1('0xE02363cB1e4E1B77a74fAf38F3Dbb7d0B70F26D7')
+
+@pytest.fixture
+def yhbtcstrategyv2(Strategy):
+    yield Strategy.at('0x91cBf0014a966615e1050c90A1aBf1d1d5d8cffd')
+
 @pytest.fixture
 def hCRV(interface):
     yield interface.ICrvV3('0xb19059ebb43466C323583928285a49f558E572Fd')
@@ -137,14 +145,21 @@ def keeper(accounts):
 
 @pytest.fixture
 def live_strategy(Strategy):
-    strategy = Strategy.at('0xCa8C5e51e235EF1018B2488e4e78e9205064D736')
+    strategy = Strategy.at('0xa371fC9d259c614258e8eEc066D9eB74C58b8247')
+
+    yield strategy
+
+
+@pytest.fixture
+def live_strategy2(Strategy):
+    strategy = Strategy.at('0x308518f220D5c6FBeF497ac7744D3D1194c7AFF9')
 
     yield strategy
 
 @pytest.fixture
 def live_vault(pm):
     Vault = pm(config["dependencies"][0]).Vault
-    vault = Vault.at('0xdCD90C7f6324cfa40d7169ef80b12031770B4325')
+    vault = Vault.at('0xBF7AA989192b020a8d3e1C65a558e123834325cA')
     yield vault
 
 @pytest.fixture
