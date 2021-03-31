@@ -172,7 +172,6 @@ contract Strategy is BaseStrategyEdited {
         maxReportDelay = 86400;
         profitFactor = 1500;
         minReportDelay = 3600;
-        debtThreshold = 100 * 1e18;
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
         debtThreshold = 100 * (uint256(10)**want_decimals);
@@ -474,49 +473,46 @@ contract Strategy is BaseStrategyEdited {
 
         if (_wantToInvest > 0) {
             //add to curve (single sided)
-            if (_checkSlip(_wantToInvest)) {
-                uint256 expectedOut =
-                    _wantToInvest.mul(1e18).div(virtualPriceToWant());
+            uint256 expectedOut =
+                _wantToInvest.mul(1e18).div(virtualPriceToWant());
 
-                uint256 maxSlip =
-                    expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(
-                        DENOMINATOR
-                    );
+            uint256 maxSlip =
+                expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(
+                     DENOMINATOR
+                );
 
                 //pool size cannot be more than 4 or less than 2
-                if (poolSize == 2) {
-                    uint256[2] memory amounts;
-                    amounts[uint256(curveId)] = _wantToInvest;
-                    if (hasUnderlying) {
-                        curvePool.add_liquidity(amounts, maxSlip, true);
-                    } else {
-                        curvePool.add_liquidity(amounts, maxSlip);
-                    }
-                } else if (poolSize == 3) {
-                    uint256[3] memory amounts;
-                    amounts[uint256(curveId)] = _wantToInvest;
-                    if (hasUnderlying) {
-                        curvePool.add_liquidity(amounts, maxSlip, true);
-                    } else {
-                        curvePool.add_liquidity(amounts, maxSlip);
-                    }
+            if (poolSize == 2) {
+                uint256[2] memory amounts;
+                amounts[uint256(curveId)] = _wantToInvest;
+                if (hasUnderlying) {
+                    curvePool.add_liquidity(amounts, maxSlip, true);
                 } else {
-                    uint256[4] memory amounts;
-                    amounts[uint256(curveId)] = _wantToInvest;
-                    if (hasUnderlying) {
-                        curvePool.add_liquidity(amounts, maxSlip, true);
-                    } else {
-                        curvePool.add_liquidity(amounts, maxSlip);
-                    }
+                    curvePool.add_liquidity(amounts, maxSlip);
                 }
+            } else if (poolSize == 3) {
+                uint256[3] memory amounts;
+                amounts[uint256(curveId)] = _wantToInvest;
+                if (hasUnderlying) {
+                    curvePool.add_liquidity(amounts, maxSlip, true);
+                } else {
+                    curvePool.add_liquidity(amounts, maxSlip);
+                }
+            } else {
+                uint256[4] memory amounts;
+                amounts[uint256(curveId)] = _wantToInvest;
+                if (hasUnderlying) {
+                    curvePool.add_liquidity(amounts, maxSlip, true);
+                } else {
+                    curvePool.add_liquidity(amounts, maxSlip);
+                }
+            }
 
                 //now add to yearn
-                yvToken.deposit();
+            yvToken.deposit();
 
-                lastInvest = block.timestamp;
-            } else {
-                require(false, "quee");
-            }
+            lastInvest = block.timestamp;
+            
 
             /*if(curveId == 0){
                 amounts = [_wantToInvest, 0];
