@@ -415,50 +415,6 @@ contract Strategy is BaseStrategyEdited {
         return amounts[amounts.length - 1];
     }
 
-    function _checkSlip(uint256 _wantToInvest) public view returns (bool) {
-        return true;
-        /*
-        //convertToMiddle
-        if(hasUnderlying){
-            if(want_decimals > middle_decimals){
-                _wantToInvest = _wantToInvest.div(10 ** uint256(want_decimals - middle_decimals));
-
-            }else if (want_decimals < middle_decimals){
-                _wantToInvest = _wantToInvest.mul(10 ** uint256(middle_decimals - want_decimals));
-            }
-        }
-
-        uint256 vp = virtualPriceToWant();
-        uint256 expectedOut = _wantToInvest.mul(1e18).div(vp);
-
-        uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
-
-        uint256 roughOut;
-
-        if(poolSize == 2){
-            uint256[2] memory amounts;
-            amounts[uint256(curveId)] = _wantToInvest;
-            //note doesnt take into account underlying
-            roughOut = curvePool.calc_token_amount(amounts, true);
-
-        }else if (poolSize == 3){
-            uint256[3] memory amounts;
-            amounts[uint256(curveId)] = _wantToInvest;
-            //note doesnt take into account underlying
-            roughOut = curvePool.calc_token_amount(amounts, true);
-
-        }else{
-            uint256[4] memory amounts;
-            amounts[uint256(curveId)] = _wantToInvest;
-            //note doesnt take into account underlying
-            roughOut = curvePool.calc_token_amount(amounts, true);
-        }
-
-        if(roughOut >= maxSlip){
-            return true;
-        }*/
-    }
-
     function adjustPosition(uint256 _debtOutstanding) internal override {
         if (dontInvest) {
             return;
