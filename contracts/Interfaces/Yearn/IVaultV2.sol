@@ -38,6 +38,7 @@ interface IVaultV2 is IERC20 {
     function totalDebt() external view returns (uint256);
 
     function withdraw(uint256 maxShares) external returns (uint256);
+    function migrateStrategy(address, address) external;
     function setManagementFee(uint256) external;
     function updateStrategyDebtRatio(address, uint256) external;
 

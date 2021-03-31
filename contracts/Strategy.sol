@@ -45,6 +45,7 @@ contract Strategy is BaseStrategyEdited {
     uint256 public slippageProtectionIn;// = 50; //out of 10000. 50 = 0.5%
     uint256 public slippageProtectionOut;// = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10000;
+    bool public dontInvest;
 
     uint8 private want_decimals;
     uint8 private middle_decimals;
@@ -142,6 +143,7 @@ contract Strategy is BaseStrategyEdited {
         debtThreshold = 100*1e18;
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
+        debtThreshold = 100 * (uint256(10) ** want_decimals);
 
         want.safeApprove(address(curvePool), uint256(-1));
         curveToken.approve(address(yvToken), uint256(-1));
@@ -184,17 +186,20 @@ contract Strategy is BaseStrategyEdited {
         return string(abi.encodePacked("SingleSidedCrv", IERC20Extended(address(want)).symbol()));
     }
 
-    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyGovernance {
+    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyAuthorized {
         minTimePerInvest = _minTimePerInvest;
     }
-    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyGovernance {
+    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyAuthorized {
         maxSingleInvest = _maxSingleInvest;
     }
-    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyGovernance {
+    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyAuthorized {
         slippageProtectionIn = _slippageProtectionIn;
     }
-    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyGovernance {
+    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyAuthorized {
         slippageProtectionOut = _slippageProtectionOut;
+    }
+    function updateDontInvest(bool _dontInvest) public onlyAuthorized {
+        dontInvest = _dontInvest;
     }
 
 
@@ -388,7 +393,9 @@ contract Strategy is BaseStrategyEdited {
 
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
-
+        if(dontInvest){
+            return;
+        }
         if(lastInvest.add(minTimePerInvest) > block.timestamp ){
             return;
         }
@@ -532,6 +539,7 @@ contract Strategy is BaseStrategyEdited {
 
     function prepareMigration(address _newStrategy) internal override {
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
+        curveToken.transfer(_newStrategy, curveToken.balanceOf(address(this)));
     }
 
     
