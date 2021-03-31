@@ -19,9 +19,21 @@ def live_vault_usdt(pm):
     yield vault
 
 @pytest.fixture
+def live_vault_dai(interface):
+    vault = interface.IVaultV2('0x19D3364A399d251E894aC732651be8B0E4e85001')
+    yield vault
+
+
+
+@pytest.fixture
 def wbtc(interface):
     #this one is hbtc
     yield interface.ERC20('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
+
+@pytest.fixture
+def dai(interface):
+    #this one is hbtc
+    yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
 
 @pytest.fixture
 def usdt(interface):
@@ -30,7 +42,10 @@ def usdt(interface):
 
 
 @pytest.fixture
-def whale(accounts, web3, currency, chain, wbtc):
+def whale(accounts, web3, currency, chain, wbtc, dai):
+
+    daiAcc = accounts.at("0xb0Fa2BeEe3Cf36a7Ac7E99B885b48538Ab364853", force=True)
+
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
@@ -39,9 +54,12 @@ def whale(accounts, web3, currency, chain, wbtc):
     #big huboi wallet
     #acc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
 
+
+
     #wbtc account
     wb = accounts.at('0x3dfd23A6c5E8BbcFc9581d2E864a68feb6a076d3', force=True)
     wbtc.transfer(acc, wbtc.balanceOf(wb),  {'from': wb})
+    dai.transfer(acc, dai.balanceOf(daiAcc),  {'from': daiAcc})
 
 
 
@@ -192,6 +210,12 @@ def live_usdt_vault(pm):
 @pytest.fixture
 def strategy_usdt_ib(strategist, keeper, live_usdt_vault, Strategy, ibCurvePool, ib3CRV, ibyvault):
     strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
+    strategy.setKeeper(keeper)
+    yield strategy
+
+@pytest.fixture
+def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault):
+    strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
     strategy.setKeeper(keeper)
     yield strategy
 
