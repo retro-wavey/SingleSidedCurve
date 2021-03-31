@@ -39,18 +39,25 @@ interface VaultAPI is IERC20 {
 
     function deposit(uint256 amount) external returns (uint256);
 
-    function deposit(uint256 amount, address recipient) external returns (uint256);
+    function deposit(uint256 amount, address recipient)
+        external
+        returns (uint256);
 
     // NOTE: Vyper produces multiple signatures for a given function with "default" args
     function withdraw() external returns (uint256);
 
     function withdraw(uint256 maxShares) external returns (uint256);
 
-    function withdraw(uint256 maxShares, address recipient) external returns (uint256);
+    function withdraw(uint256 maxShares, address recipient)
+        external
+        returns (uint256);
 
     function token() external view returns (address);
 
-    function strategies(address _strategy) external view returns (StrategyParams memory);
+    function strategies(address _strategy)
+        external
+        view
+        returns (StrategyParams memory);
 
     function pricePerShare() external view returns (uint256);
 
@@ -155,7 +162,12 @@ interface StrategyAPI {
 
     function harvest() external;
 
-    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
+    event Harvested(
+        uint256 profit,
+        uint256 loss,
+        uint256 debtPayment,
+        uint256 debtOutstanding
+    );
 }
 
 /**
@@ -198,7 +210,7 @@ abstract contract BaseStrategyEdited {
      *  `apiVersion()` function above.
      * @return This Strategy's name.
      */
-    function name() external virtual view returns (string memory);
+    function name() external view virtual returns (string memory);
 
     /**
      * @notice
@@ -213,7 +225,7 @@ abstract contract BaseStrategyEdited {
      *  The amount of assets this strategy manages that should not be included in Yearn's Total Value
      *  Locked (TVL) calculation across it's ecosystem.
      */
-    function delegatedAssets() external virtual view returns (uint256) {
+    function delegatedAssets() external view virtual returns (uint256) {
         return 0;
     }
 
@@ -225,7 +237,12 @@ abstract contract BaseStrategyEdited {
     IERC20 public want;
 
     // So indexers can keep track of this
-    event Harvested(uint256 profit, uint256 loss, uint256 debtPayment, uint256 debtOutstanding);
+    event Harvested(
+        uint256 profit,
+        uint256 loss,
+        uint256 debtPayment,
+        uint256 debtOutstanding
+    );
 
     event UpdatedStrategist(address newStrategist);
 
@@ -266,7 +283,10 @@ abstract contract BaseStrategyEdited {
 
     // modifiers
     modifier onlyAuthorized() {
-        require(msg.sender == strategist || msg.sender == governance(), "!authorized");
+        require(
+            msg.sender == strategist || msg.sender == governance(),
+            "!authorized"
+        );
         _;
     }
 
@@ -450,7 +470,10 @@ abstract contract BaseStrategyEdited {
      *  This may only be called by governance or the strategist.
      * @param _metadataURI The URI that describe the strategy.
      */
-    function setMetadataURI(string calldata _metadataURI) external onlyAuthorized {
+    function setMetadataURI(string calldata _metadataURI)
+        external
+        onlyAuthorized
+    {
         metadataURI = _metadataURI;
         emit UpdatedMetadataURI(_metadataURI);
     }
@@ -487,7 +510,7 @@ abstract contract BaseStrategyEdited {
      *  value to be "safe".
      * @return The estimated total assets in this Strategy.
      */
-    function estimatedTotalAssets() public virtual view returns (uint256);
+    function estimatedTotalAssets() public view virtual returns (uint256);
 
     /*
      * @notice
@@ -498,7 +521,9 @@ abstract contract BaseStrategyEdited {
      * @return True if the strategy is actively managing a position.
      */
     function isActive() public view returns (bool) {
-        return vault.strategies(address(this)).debtRatio > 0 || estimatedTotalAssets() > 0;
+        return
+            vault.strategies(address(this)).debtRatio > 0 ||
+            estimatedTotalAssets() > 0;
     }
 
     /**
@@ -557,7 +582,10 @@ abstract contract BaseStrategyEdited {
      *
      * NOTE: The invariant `_liquidatedAmount + _loss <= _amountNeeded` should always be maintained
      */
-    function liquidatePosition(uint256 _amountNeeded) internal virtual returns (uint256 _liquidatedAmount, uint256 _loss);
+    function liquidatePosition(uint256 _amountNeeded)
+        internal
+        virtual
+        returns (uint256 _liquidatedAmount, uint256 _loss);
 
     /**
      * @notice
@@ -577,7 +605,7 @@ abstract contract BaseStrategyEdited {
      * @param callCost The keeper's estimated cast cost to call `tend()`.
      * @return `true` if `tend()` should be called, `false` otherwise.
      */
-    function tendTrigger(uint256 callCost) public virtual view returns (bool) {
+    function tendTrigger(uint256 callCost) public view virtual returns (bool) {
         // We usually don't need tend, but if there are positions that need
         // active maintainence, overriding this function is how you would
         // signal for that.
@@ -628,17 +656,24 @@ abstract contract BaseStrategyEdited {
      * @param callCost The keeper's estimated cast cost to call `harvest()`.
      * @return `true` if `harvest()` should be called, `false` otherwise.
      */
-    function harvestTrigger(uint256 callCost) public virtual view returns (bool) {
+    function harvestTrigger(uint256 callCost)
+        public
+        view
+        virtual
+        returns (bool)
+    {
         StrategyParams memory params = vault.strategies(address(this));
 
         // Should not trigger if Strategy is not activated
         if (params.activation == 0) return false;
 
         // Should not trigger if we haven't waited long enough since previous harvest
-        if (block.timestamp.sub(params.lastReport) < minReportDelay) return false;
+        if (block.timestamp.sub(params.lastReport) < minReportDelay)
+            return false;
 
         // Should trigger if hasn't been called in a while
-        if (block.timestamp.sub(params.lastReport) >= maxReportDelay) return true;
+        if (block.timestamp.sub(params.lastReport) >= maxReportDelay)
+            return true;
 
         // If some amount is owed, pay it back
         // NOTE: Since debt is based on deposits, it makes sense to guard against large
@@ -688,7 +723,9 @@ abstract contract BaseStrategyEdited {
             // Free up as much capital as possible
             uint256 totalAssets = estimatedTotalAssets();
             // NOTE: use the larger of total assets or debt outstanding to book losses properly
-            (debtPayment, loss) = liquidatePosition(totalAssets > debtOutstanding ? totalAssets : debtOutstanding);
+            (debtPayment, loss) = liquidatePosition(
+                totalAssets > debtOutstanding ? totalAssets : debtOutstanding
+            );
             // NOTE: take up any remainder here as profit
             if (debtPayment > debtOutstanding) {
                 profit = debtPayment.sub(debtOutstanding);
@@ -785,7 +822,7 @@ abstract contract BaseStrategyEdited {
      *      return protected;
      *    }
      */
-    function protectedTokens() internal virtual view returns (address[] memory);
+    function protectedTokens() internal view virtual returns (address[] memory);
 
     /**
      * @notice
@@ -809,9 +846,13 @@ abstract contract BaseStrategyEdited {
         require(_token != address(vault), "!shares");
 
         address[] memory _protectedTokens = protectedTokens();
-        for (uint256 i; i < _protectedTokens.length; i++) require(_token != _protectedTokens[i], "!protected");
+        for (uint256 i; i < _protectedTokens.length; i++)
+            require(_token != _protectedTokens[i], "!protected");
 
-        IERC20(_token).safeTransfer(governance(), IERC20(_token).balanceOf(address(this)));
+        IERC20(_token).safeTransfer(
+            governance(),
+            IERC20(_token).balanceOf(address(this))
+        );
     }
 }
 
@@ -845,13 +886,24 @@ abstract contract BaseStrategyInitializable is BaseStrategyEdited {
         assembly {
             // EIP-1167 bytecode
             let clone_code := mload(0x40)
-            mstore(clone_code, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
+            mstore(
+                clone_code,
+                0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000
+            )
             mstore(add(clone_code, 0x14), addressBytes)
-            mstore(add(clone_code, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
+            mstore(
+                add(clone_code, 0x28),
+                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
+            )
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        BaseStrategyInitializable(newStrategy).initialize(_vault, _strategist, _rewards, _keeper);
+        BaseStrategyInitializable(newStrategy).initialize(
+            _vault,
+            _strategist,
+            _rewards,
+            _keeper
+        );
 
         emit Cloned(newStrategy);
     }
