@@ -9,15 +9,16 @@ import brownie
 def test_hbtc_1(currency,Strategy,curvePool, hCRV,yvaultv2, orb,rewards,chain,yhbtcstrategyv2,live_vault, live_strategy, ychad, whale,gov,strategist, interface, samdev):
     vault = live_vault
     strategist = samdev
-    strategy = strategist.deploy(Strategy, vault, 2*1e18)
+    #strategy = strategist.deploy(Strategy, vault, 2*1e18)
+    strategy = Strategy.at("0x308518f220D5c6FBeF497ac7744D3D1194c7AFF9")
     vault.revokeStrategy(live_strategy, {'from': strategist})
 
     yvault = yvaultv2
-    yvault.setDepositLimit(10_000 * 1e18, {'from': ychad})
-    debt_ratio = 10_000
-    vault.addStrategy(strategy, debt_ratio,0, 2 ** 256 - 1, 1000, {"from": strategist})
-    vault.setManagementFee(0, {"from": strategist})
-    vault.setPerformanceFee(0, {"from": strategist})
+    #yvault.setDepositLimit(10_000 * 1e18, {'from': ychad})
+    #debt_ratio = 10_000
+    #vault.addStrategy(strategy, debt_ratio,0, 2 ** 256 - 1, 1000, {"from": strategist})
+    #vault.setManagementFee(0, {"from": strategist})
+    #vault.setPerformanceFee(0, {"from": strategist})
 
     #currency.approve(vault, 2 ** 256 - 1, {"from": whale} )
     #whalebefore = currency.balanceOf(whale)
