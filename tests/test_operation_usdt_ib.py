@@ -2,7 +2,7 @@ from itertools import count
 from brownie import Wei, reverts
 import eth_abi
 from brownie.convert import to_bytes
-from useful_methods import genericStateOfStrat,genericStateOfVault
+from useful_methods import genericStateOfStrat,genericStateOfVault, genericStateOfStrat030
 import random
 import brownie
 

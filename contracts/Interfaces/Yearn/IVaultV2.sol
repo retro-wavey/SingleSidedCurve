@@ -35,6 +35,7 @@ interface IVaultV2 is IERC20 {
 
     // NOTE: Vyper produces multiple signatures for a given function with "default" args
     function withdraw() external returns (uint256);
+    function totalDebt() external view returns (uint256);
 
     function withdraw(uint256 maxShares) external returns (uint256);
     function setManagementFee(uint256) external;

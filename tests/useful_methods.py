@@ -64,6 +64,27 @@ def stateOfStrat(strategy, dai, comp):
     toLiquidation =  strategy.getblocksUntilLiquidation()
     print('Weeks to liquidation:', toLiquidation/44100)
 
+def genericStateOfStrat030(strategy, currency, vault):
+    decimals = currency.decimals()
+    print(f"\n----state of {strategy.name()}----")
+
+    print("Want:", currency.balanceOf(strategy)/  (10 ** decimals))
+    print("Total assets estimate:", strategy.estimatedTotalAssets()/  (10 ** decimals))
+    strState = vault.strategies(strategy)
+    totalDebt = strState[5]/  (10 ** decimals)
+    debtLimit = strState[2]
+    totalLosses = strState[7]/  (10 ** decimals)
+    totalReturns = strState[6]/  (10 ** decimals)
+    print(f"Total Strategy Debt: {totalDebt:.5f}")
+    print(f"Strategy Debt Limit: {debtLimit:.5f}")
+    print(f"Total Strategy Gains: {totalReturns}")
+    print(f"Total Strategy losses: {totalLosses}")
+    print("Harvest Trigger:", strategy.harvestTrigger(1000000 * 30 * 1e9))
+    print(
+        "Tend Trigger:", strategy.tendTrigger(1000000 * 30 * 1e9)
+    )  # 1m gas at 30 gwei
+    print("Emergency Exit:", strategy.emergencyExit())
+
 def genericStateOfStrat(strategy, currency, vault):
     decimals = currency.decimals()
     print(f"\n----state of {strategy.name()}----")

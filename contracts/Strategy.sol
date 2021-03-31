@@ -7,7 +7,7 @@ import "./interfaces/curve/ICrvV3.sol";
 import "./interfaces/erc20/IERC20Extended.sol";
 
 // These are the core Yearn libraries
-import "@yearnvaults/contracts/BaseStrategy.sol";
+import "./BaseStrategyEdited.sol";
 
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -25,7 +25,7 @@ interface IUni {
 // Import interfaces for many popular DeFi projects, or add your own!
 //import "../interfaces/<protocol>/<Interface>.sol";
 
-contract Strategy is BaseStrategy {
+contract Strategy is BaseStrategyEdited {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -65,7 +65,7 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         uint256 _poolSize,
         bool _hasUnderlying
-    ) public BaseStrategy(_vault) {
+    ) public BaseStrategyEdited(_vault) {
          _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
     }
 
@@ -198,9 +198,9 @@ contract Strategy is BaseStrategy {
     }
 
 
-    function delegatedAssets() public override view returns (uint256) {
+    /*function delegatedAssets() public override view returns (uint256) {
         return Math.min(curveTokenToWant(curveTokensInYVault()), vault.strategies(address(this)).totalDebt);
-    }
+    }*/
     function estimatedTotalAssets() public override view returns (uint256) {
         uint256 totalCurveTokens = curveTokensInYVault().add(curveToken.balanceOf(address(this)));
         return want.balanceOf(address(this)).add(curveTokenToWant(totalCurveTokens));

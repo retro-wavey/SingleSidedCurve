@@ -2,7 +2,7 @@ from itertools import count
 from brownie import Wei, reverts
 import eth_abi
 from brownie.convert import to_bytes
-from useful_methods import genericStateOfStrat,genericStateOfVault
+from useful_methods import genericStateOfStrat,genericStateOfVault, genericStateOfStrat030
 import random
 import brownie
 
@@ -45,6 +45,8 @@ def test_dai_1(usdt,stratms, whale,Strategy, ibCurvePool,strategy_dai_ib, accoun
     idl.harvest({'from': gov})
 
     strategy.harvest({'from': strategist})
+    ppsB = strategy.estimatedTotalAssets()
+    print("est ",  strategy.estimatedTotalAssets()/1e18)
     #genericStateOfStrat(strategy, currency, vault)
     #genericStateOfVault(vault, currency)
 
@@ -57,22 +59,18 @@ def test_dai_1(usdt,stratms, whale,Strategy, ibCurvePool,strategy_dai_ib, accoun
     ibcrvStrat.harvest({"from": vGov})
     chain.sleep(21600)
     chain.mine(1)
-    strategy.harvest({'from': strategist})
-    print(vault.strategies(strategy))
-    genericStateOfStrat(strategy, currency, vault)
-    genericStateOfVault(vault, currency)
- 
-    vault.withdraw({"from": whale})
-    whale_after = currency.balanceOf(whale)
-    print("profit =", (whale_after - whale_before)/(10 ** (decimals)))
-    print("balance left =", vault.balanceOf(whale))
-    genericStateOfStrat(strategy, currency, vault)
-    genericStateOfVault(vault, currency)
-    chain.sleep(21600)
-    chain.mine(1)
+    print("profit ",  (((strategy.estimatedTotalAssets() - ppsB) * 156) /ppsB)*100, "%")
 
     strategy.harvest({'from': strategist})
-    genericStateOfStrat(strategy, currency, vault)
+    print(vault.strategies(strategy))
+    genericStateOfStrat030(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+    vault.updateStrategyDebtRatio(strategy, 0 , {"from": gov})
+    strategy.harvest({'from': strategist})
+    genericStateOfStrat030(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+ 
+    
 
 def test_migrate(usdt,stratms, ibCurvePool,Strategy, accounts, ib3CRV,ibyvault, orb,rewards,chain,strategy_usdt_ib,live_usdt_vault, ychad, gov,strategist, interface):
     gov = stratms
