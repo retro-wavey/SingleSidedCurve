@@ -18,6 +18,7 @@ interface IVaultV2 is IERC20 {
     function symbol() external view returns (string calldata);
 
     function decimals() external view returns (uint256);
+    function debtRatio() external view returns (uint256);
 
     function apiVersion() external pure returns (string memory);
 

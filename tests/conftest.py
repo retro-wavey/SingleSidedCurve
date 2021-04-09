@@ -27,6 +27,19 @@ def live_vault_dai(interface):
     vault = interface.IVaultV2("0x19D3364A399d251E894aC732651be8B0E4e85001")
     yield vault
 
+@pytest.fixture
+def live_vault_usdc(interface):
+    vault = interface.IVaultV2("0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9")
+    yield vault
+
+@pytest.fixture
+def live_strat_dai(Strategy):
+    yield Strategy.at('0x6a6B94A78cBA0F55BC4D41b37f2229427800B4dA')
+
+@pytest.fixture
+def live_strat_usdc(Strategy):
+    yield Strategy.at('0x80af28cb1e44C44662F144475d7667C9C0aaB3C3')
+
 
 @pytest.fixture
 def wbtc(interface):
@@ -254,7 +267,7 @@ def strategy_dai_ib(
     strategy = strategist.deploy(
         Strategy,
         live_vault_dai,
-        100_000_000 * 1e18,
+        2_000_000 * 1e18,
         3600,
         500,
         ibCurvePool,
@@ -265,6 +278,27 @@ def strategy_dai_ib(
     )
     strategy.setKeeper(keeper)
     yield strategy
+
+@pytest.fixture
+def strategy_usdc_ib(
+    strategist, keeper, live_vault_usdc, Strategy, live_strat_dai, ibCurvePool, ib3CRV, ibyvault
+):
+    tx = live_strat_dai.cloneSingleSidedCurve(
+        live_vault_usdc,
+        strategist,
+        strategist,
+        strategist,
+        20_000_000 * 1e6,
+        0,
+        500,
+        ibCurvePool,
+        ib3CRV,
+        ibyvault,
+        3,
+        True,
+        {"from": strategist},
+    )
+    yield Strategy.at(tx.return_value)
 
 
 @pytest.fixture

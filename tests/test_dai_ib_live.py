@@ -209,3 +209,68 @@ def test_migrate(
 
     genericStateOfStrat030(new_strat, currency, vault)
     genericStateOfVault(vault, currency)
+
+def test_snapshot(
+    usdt,
+    stratms,
+    whale,
+    Strategy,
+    ibCurvePool,
+    strategy_dai_ib,
+    accounts,
+    ib3CRV,
+    ibyvault,
+    orb,
+    rewards,
+    chain,
+    Contract,
+    strategy_usdt_ib,
+    live_vault_dai,
+    ychad,
+    gov,
+    strategist,
+    interface,
+):
+
+    ms = accounts.at("0x16388463d60ffe0661cf7f1f31a7d658ac790ff7", force=True)
+    #dai_vault = Contract("0x19D3364A399d251E894aC732651be8B0E4e85001")
+    #ssc = "0x6a6B94A78cBA0F55BC4D41b37f2229427800B4dA"
+    #lev_comp = "0x4031afd3B0F71Bace9181E554A9E680Ee4AbE7dF"
+    #ib_lev_comp = "0x77b7CD137Dd9d94e7056f78308D7F65D2Ce68910"
+    #ah2 = "0x7D960F3313f3cB1BBB6BF67419d303597F3E2Fa8"
+    #dai_vault.updateStrategyDebtRatio(ah2, 1500, {"from": ms})
+    #dai_vault.updateStrategyDebtRatio(lev_comp, 4700, {"from": ms})
+    #dai_vault.updateStrategyDebtRatio(ib_lev_comp, 1000, {"from": ms})
+    #dai_vault.updateStrategyDebtRatio(ssc, 1000, {"from": ms})
+    #assert dai_vault.debtRatio() == 10_000
+
+    #usdc_vault = Contract("0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9")
+    #lev_comp = "0x4D7d4485fD600c61d840ccbeC328BfD76A050F87"
+    #ib_lev_comp = "0xE68A8565B4F837BDa10e2e917BFAaa562e1cD143"
+    #ssc = "0x80af28cb1e44C44662F144475d7667C9C0aaB3C3"
+    #ah2 = "0x86Aa49bf28d03B1A4aBEb83872cFC13c89eB4beD"
+
+    #usdc_vault.updateStrategyDebtRatio(lev_comp, 3750, {"from": ms})
+    #usdc_vault.updateStrategyDebtRatio(ah2, 1500, {"from": ms})
+    #usdc_vault.updateStrategyDebtRatio(ssc, 1000, {"from": ms})
+    #usdc_vault.updateStrategyDebtRatio(ib_lev_comp, 1250, {"from": ms})
+
+    #assert usdc_vault.debtRatio() == 10_000
+
+    vault = live_vault_dai
+    currency = interface.ERC20(vault.token())
+    decimals = currency.decimals()
+    gov = accounts.at(vault.governance(), force=True)
+    strategy = Strategy.at('0x6a6B94A78cBA0F55BC4D41b37f2229427800B4dA')
+    strategist = accounts.at(strategy.strategist(), force=True)
+    #vault.updateStrategyDebtRatio(strategy, 1250, {"from": ms})
+
+    
+    genericStateOfStrat030(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+
+    strategy.harvest({"from": strategist})
+    
+    genericStateOfStrat030(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+    
