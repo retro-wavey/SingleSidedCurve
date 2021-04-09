@@ -47,6 +47,16 @@ def test_opsss_lvie(currency,live_strategy, chain,live_vault, whale,gov, samdev,
     genericStateOfVault(vault, currency)
   # print("Whale profit: ", (currency.balanceOf(whale) - whalebefore)/1e18)
 
+def test_snapshot(currency,Strategy, live_strategy2,live_vault, chain, whale,samdev, interface):
+  strategy = live_strategy2
+  vault = live_vault
+  currency = interface.ERC20(vault.token())
+  genericStateOfStrat(strategy, currency, vault)
+  genericStateOfVault(vault, currency)
+  strategy.harvest({'from': samdev})
+  genericStateOfStrat(strategy, currency, vault)
+  genericStateOfVault(vault, currency)
+
 
 def test_migrate_live(currency,Strategy, live_strategy,live_vault, chain, whale,samdev, interface):
     strategy = live_strategy
