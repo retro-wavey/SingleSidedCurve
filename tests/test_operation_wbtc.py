@@ -18,7 +18,9 @@ def test_wbtc_1(currency,Strategy,curvePool, accounts, hCRV,yvaultv2, orb,reward
     currency = interface.ERC20(vault.token())
     gov = accounts.at(vault.governance(), force=True)
     vault.setDepositLimit(2**256-1, {"from": gov})
-    strategy = strategist.deploy(Strategy, vault, 2*1e8)
+    #strategy = strategist.deploy(Strategy, vault, 2*1e8)
+    strategy = Strategy.at('0x148f64a2BeD9c815EDcD43754d3323283830070c')
+    strategist = accounts.at(strategy.strategist(), force=True)
     yvault.setDepositLimit(2**256-1, {'from': ychad})
     debt_ratio = 10_000
     vault.addStrategy(strategy, debt_ratio,0, 2 ** 256 - 1, 1000, {"from": gov})
