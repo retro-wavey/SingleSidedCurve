@@ -11,9 +11,9 @@ def test_hbtc_1(currency,Strategy,curvePool, hCRV,yvaultv2, orb,rewards,chain,yh
     strategist = samdev
     #strategy = strategist.deploy(Strategy, vault, 2*1e18)
     strategy = Strategy.at("0x308518f220D5c6FBeF497ac7744D3D1194c7AFF9")
-    vault.revokeStrategy(live_strategy, {'from': strategist})
+    #vault.revokeStrategy(live_strategy, {'from': strategist})
 
-    yvault = yvaultv2
+    #yvault = yvaultv2
     #yvault.setDepositLimit(10_000 * 1e18, {'from': ychad})
     #debt_ratio = 10_000
     #vault.addStrategy(strategy, debt_ratio,0, 2 ** 256 - 1, 1000, {"from": strategist})
@@ -24,31 +24,35 @@ def test_hbtc_1(currency,Strategy,curvePool, hCRV,yvaultv2, orb,rewards,chain,yh
     #whalebefore = currency.balanceOf(whale)
     #whale_deposit  = 2 *1e18
     #vault.deposit(whale_deposit, {"from": whale})
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
     strategy.harvest({'from': strategist})
+    genericStateOfStrat(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
     #print(strategy.curveTokenToWant(1e18))
     #print(yvault.totalSupply())
     #assert strategy.curveTokensInYVault() == yvault.balanceOf(strategy)
     #print(yvault.balanceOf(strategy))
     #yvault.earn({'from': ychad})
 
-    yhbtcstrategyv2.harvest({'from': ychad})
-    print(hCRV.balanceOf(yvault))
+    #yhbtcstrategyv2.harvest({'from': ychad})
+    #print(hCRV.balanceOf(yvault))
     #yhbtcstrategy.deposit()
     #genericStateOfStrat(strategy, currency, vault)
     #genericStateOfVault(vault, currency)
-    genericStateOfStrat(strategy, currency, vault)
-    genericStateOfVault(vault, currency)
-    chain.sleep(2592000)
-    chain.mine(1)
+    #genericStateOfStrat(strategy, currency, vault)
+    #genericStateOfVault(vault, currency)
+    #chain.sleep(2592000)
+    #chain.mine(1)
 
-    yhbtcstrategyv2.harvest({'from': orb})
+    #yhbtcstrategyv2.harvest({'from': orb})
     
 
-    chain.sleep(21600)
-    chain.mine(1)
-    strategy.harvest({'from': strategist})
-    genericStateOfStrat(strategy, currency, vault)
-    genericStateOfVault(vault, currency)
+    #chain.sleep(21600)
+    #chain.mine(1)
+    #strategy.harvest({'from': strategist})
+    #genericStateOfStrat(strategy, currency, vault)
+    #genericStateOfVault(vault, currency)
 
-    print("\nEstimated APR: ", "{:.2%}".format(((vault.totalAssets()-2*1e18)*12)/(2*1e18)))
+    #print("\nEstimated APR: ", "{:.2%}".format(((vault.totalAssets()-2*1e18)*12)/(2*1e18)))
     
