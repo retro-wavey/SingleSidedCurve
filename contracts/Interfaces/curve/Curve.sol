@@ -6,6 +6,11 @@ interface ICurveFi {
     function get_virtual_price() external view returns (uint256);
 
     function add_liquidity(
+        uint256[2] calldata amounts,
+        uint256 min_mint_amount
+    ) external;
+
+    function add_liquidity(
         // sBTC pool
         uint256[3] calldata amounts,
         uint256 min_mint_amount
@@ -20,11 +25,11 @@ interface ICurveFi {
     function add_liquidity(
         // stETH pool
         uint256[2] calldata amounts,
-        uint256 min_mint_amount
+        uint256 min_mint_amount,
+        bool use_underlying
     ) external payable;
 
     function add_liquidity(
-        // sBTC pool
         uint256[3] calldata amounts,
         uint256 min_mint_amount,
         bool use_underlying
@@ -36,13 +41,6 @@ interface ICurveFi {
         uint256 min_mint_amount,
         bool use_underlying
     ) external;
-
-    function add_liquidity(
-        // stETH pool
-        uint256[2] calldata amounts,
-        uint256 min_mint_amount,
-        bool use_underlying
-    ) external payable;
 
     // Curve.fi Factory USD Metapool v2
     function add_liquidity(
