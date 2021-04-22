@@ -80,6 +80,27 @@ interface ICurveFi {
         int128 to,
         uint256 _from_amount,
         uint256 _min_to_amount
+    ) external;
+
+    function exchange(
+        int128 from,
+        int128 to,
+        uint256 _from_amount,
+        uint256 _min_to_amount
+    ) external payable;
+
+    function exchange_underlying(
+        int128 i,
+        int128 j,
+        uint256 dx,
+        uint256 min_dy
+    ) external;
+
+    function exchange_underlying(
+        int128 i,
+        int128 j,
+        uint256 dx,
+        uint256 min_dy
     ) external payable;
 
     function balances(int128) external view returns (uint256);
