@@ -5,25 +5,24 @@ pragma solidity 0.6.12;
 interface ICurveFi {
     function get_virtual_price() external view returns (uint256);
 
+    // Curve.fi Pool v1
     function add_liquidity(
         uint256[2] calldata amounts,
         uint256 min_mint_amount
     ) external payable;
 
     function add_liquidity(
-        // sBTC pool
         uint256[3] calldata amounts,
         uint256 min_mint_amount
     ) external payable;
 
     function add_liquidity(
-        // bUSD pool
         uint256[4] calldata amounts,
         uint256 min_mint_amount
     ) external payable;
 
+    // Curve.fi Pool v2
     function add_liquidity(
-        // stETH pool
         uint256[2] calldata amounts,
         uint256 min_mint_amount,
         bool use_underlying
@@ -36,7 +35,6 @@ interface ICurveFi {
     ) external payable;
 
     function add_liquidity(
-        // bUSD pool
         uint256[4] calldata amounts,
         uint256 min_mint_amount,
         bool use_underlying
