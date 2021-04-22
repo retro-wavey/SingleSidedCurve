@@ -50,7 +50,7 @@ def whale(accounts, web3, currency, chain, wbtc, dai):
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
     #acc = accounts.at('0x006d0f31a00e1f9c017ab039e9d0ba699433a28c', force=True)
-    acc = accounts.at("0xf977814e90da44bfa03b6295a0616a897441acec", force=True)
+    acc = accounts.at("0xA929022c9107643515F5c777cE9a910F0D1e490C", force=True)
     #big huboi wallet
     #acc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
 
@@ -71,7 +71,12 @@ def whale(accounts, web3, currency, chain, wbtc, dai):
 @pytest.fixture
 def yvault(interface):
     yield interface.IVaultV1('0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5')
-
+@pytest.fixture
+def yvaultv2(interface):
+    yield interface.IVaultV2('0x625b7DF2fa8aBe21B0A976736CDa4775523aeD1E')
+@pytest.fixture
+def yhbtcstrategyv2(Strategy):
+    yield Strategy.at('0x91cBf0014a966615e1050c90A1aBf1d1d5d8cffd')
 @pytest.fixture
 def ibyvault(Vault):
     yield Vault.at('0x27b7b1ad7288079A66d12350c828D3C00A6F07d7')
@@ -79,6 +84,13 @@ def ibyvault(Vault):
 @pytest.fixture
 def yhbtcstrategy(interface):
     yield interface.IStratV1('0xE02363cB1e4E1B77a74fAf38F3Dbb7d0B70F26D7')
+
+@pytest.fixture
+def live_wbtc_vault(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E')
+    yield vault
+
 @pytest.fixture
 def hCRV(interface):
     yield interface.ICrvV3('0xb19059ebb43466C323583928285a49f558E572Fd')
@@ -169,14 +181,6 @@ def wbtc_vault(pm, gov, rewards, guardian, wbtc):
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
-@pytest.fixture
-def live_wbtc_vault(pm, gov, rewards, guardian, wbtc):
-    currency = wbtc
-    Vault = pm(config["dependencies"][0]).Vault
-    vault = gov.deploy(Vault)
-    vault.initialize(currency, gov, rewards, "", "", guardian)
-    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
-    yield vault
 
 @pytest.fixture
 def strategist(accounts):
@@ -216,6 +220,12 @@ def strategy_usdt_ib(strategist, keeper, live_usdt_vault, Strategy, ibCurvePool,
 @pytest.fixture
 def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault):
     strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
+    strategy.setKeeper(keeper)
+    yield strategy
+
+@pytest.fixture
+def strategy_wbtc_hbtc(strategist, keeper, live_wbtc_vault, Strategy, curvePool, hCRV, yvaultv2):
+    strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePool, hCRV, yvaultv2,2, False)
     strategy.setKeeper(keeper)
     yield strategy
 

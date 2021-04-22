@@ -119,6 +119,7 @@ interface IVaultV2 is IERC20 {
      * is subject to guardian defined by the Vault.
      */
     function guardian() external view returns (address);
+    function setDepositLimit(uint256) external;
 }
 
 struct StrategyParams {
