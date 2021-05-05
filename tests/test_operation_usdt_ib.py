@@ -39,30 +39,32 @@ def test_usdt_1(usdt,stratms, whale, ibCurvePool,Strategy, accounts, ib3CRV,ibyv
 
     idl = Strategy.at(vault.withdrawalQueue(0))
     vault.updateStrategyDebtRatio(idl, 0 , {"from": gov})
-    debt_ratio = 8000
+    debt_ratio = 10000
     vault.addStrategy(strategy, debt_ratio, 0, 2 ** 256 - 1, 1000, {"from": gov})
     idl.harvest({'from': gov})
 
     strategy.harvest({'from': strategist})
-    #genericStateOfStrat(strategy, currency, vault)
-    #genericStateOfVault(vault, currency)
-
     ibcrvStrat = Strategy.at(ibyvault.withdrawalQueue(0))
-    
     vGov = accounts.at(ibyvault.governance(), force=True)
     ibcrvStrat.harvest({"from": vGov})
-    chain.sleep(201600)
+    days_profit = 30
+    chain.sleep(86400 * days_profit)
     chain.mine(1)
     ibcrvStrat.harvest({"from": vGov})
     chain.sleep(21600)
     chain.mine(1)
     strategy.harvest({'from': strategist})
+    chain.sleep(21600)
+    chain.mine(1)
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
  
-    vault.withdraw({"from": whale})
+    vault.withdraw(vault.balanceOf(whale), whale, 1000, {"from": whale})
+    assert vault.balanceOf(whale) == 0
     whale_after = currency.balanceOf(whale)
-    print("profit =", (whale_after - whale_before)/(10 ** (decimals)))
+    profit = (whale_after - whale_before)
+    print("profit =", profit/(10 ** (decimals)))
+    print("apr =", "{:.2%}".format((profit/whale_deposit)*365/days_profit))
     print("balance left =", vault.balanceOf(whale))
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)

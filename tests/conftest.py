@@ -75,6 +75,9 @@ def yvault(interface):
 def yvaultv2(interface):
     yield interface.IVaultV2('0x625b7DF2fa8aBe21B0A976736CDa4775523aeD1E')
 @pytest.fixture
+def yvaultv2Obtc(interface):
+    yield interface.IVaultV2('0xe9Dc63083c464d6EDcCFf23444fF3CFc6886f6FB')
+@pytest.fixture
 def yhbtcstrategyv2(Strategy):
     yield Strategy.at('0x91cBf0014a966615e1050c90A1aBf1d1d5d8cffd')
 @pytest.fixture
@@ -92,12 +95,17 @@ def live_wbtc_vault(pm):
     yield vault
 
 @pytest.fixture
+def obCRV(interface):
+    yield interface.ICrvV3('0x2fE94ea3d5d4a175184081439753DE15AeF9d614')
+@pytest.fixture
 def hCRV(interface):
     yield interface.ICrvV3('0xb19059ebb43466C323583928285a49f558E572Fd')
 @pytest.fixture
 def curvePool(interface):
     yield interface.ICurveFi('0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F')
-
+@pytest.fixture
+def curvePoolObtc(interface):
+    yield interface.ICurveFi('0xd81dA8D904b52208541Bade1bD6595D8a251F8dd')
 @pytest.fixture
 def ibCurvePool(interface):
     yield interface.ICurveFi('0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF')
@@ -200,6 +208,12 @@ def live_strategy(Strategy):
     yield strategy
 
 @pytest.fixture
+def live_strategy_wbtc(Strategy):
+    strategy = Strategy.at('0x40b04B3ed9845B8Be200Aa2D9C3eDC2bE0a5f01f')
+
+    yield strategy
+
+@pytest.fixture
 def live_vault(pm):
     Vault = pm(config["dependencies"][0]).Vault
     vault = Vault.at('0xdCD90C7f6324cfa40d7169ef80b12031770B4325')
@@ -208,14 +222,15 @@ def live_vault(pm):
 @pytest.fixture
 def live_usdt_vault(pm):
     Vault = pm(config["dependencies"][0]).Vault
-    vault = Vault.at('0x32651dD149a6EC22734882F790cBEB21402663F9')
+    vault = Vault.at('0x7Da96a3891Add058AdA2E826306D812C638D87a7')
     yield vault
 
 @pytest.fixture
-def strategy_usdt_ib(strategist, keeper, live_usdt_vault, Strategy, ibCurvePool, ib3CRV, ibyvault):
-    strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
-    strategy.setKeeper(keeper)
-    yield strategy
+def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy_wbtc, ibCurvePool, ib3CRV, ibyvault):
+    #strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
+    tx = live_strategy_wbtc.cloneSingleSidedCurve(live_usdt_vault, strategist, strategist, strategist, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, {'from': strategist})
+    yield Strategy.at(tx.return_value)
+    
 
 @pytest.fixture
 def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault):
@@ -226,6 +241,12 @@ def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, i
 @pytest.fixture
 def strategy_wbtc_hbtc(strategist, keeper, live_wbtc_vault, Strategy, curvePool, hCRV, yvaultv2):
     strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePool, hCRV, yvaultv2,2, False)
+    strategy.setKeeper(keeper)
+    yield strategy
+
+@pytest.fixture
+def strategy_wbtc_obtc(strategist, keeper, live_wbtc_vault, Strategy, curvePoolObtc, obCRV, yvaultv2Obtc):
+    strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, False)
     strategy.setKeeper(keeper)
     yield strategy
 
