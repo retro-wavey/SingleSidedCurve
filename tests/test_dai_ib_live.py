@@ -213,7 +213,6 @@ def test_migrate(
 def test_snapshot(
     usdt,
     stratms,
-    whale,
     Strategy,
     ibCurvePool,
     strategy_dai_ib,
