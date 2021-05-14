@@ -302,7 +302,8 @@ contract Strategy is BaseStrategyEdited {
             realOut = curvePool.calc_withdraw_one_coin(tokens, curveId);
         }
 
-        return Math.min(virtualOut, realOut);
+        //return Math.min(virtualOut, realOut);
+        return virtualOut;
         //return realOut;
     }
 
