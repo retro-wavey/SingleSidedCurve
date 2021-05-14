@@ -295,12 +295,12 @@ contract Strategy is BaseStrategyEdited {
         //this means we will always underestimate current assets.
         uint256 virtualOut = virtualPriceToWant().mul(tokens).div(1e18);
 
-        uint256 realOut;
-        if (hasUnderlying) {
-            realOut = curvePool.calc_withdraw_one_coin(tokens, curveId, true);
-        } else {
-            realOut = curvePool.calc_withdraw_one_coin(tokens, curveId);
-        }
+        //uint256 realOut;
+        //if (hasUnderlying) {
+        //    realOut = curvePool.calc_withdraw_one_coin(tokens, curveId, true);
+        //} else {
+        //    realOut = curvePool.calc_withdraw_one_coin(tokens, curveId);
+        //}
 
         //return Math.min(virtualOut, realOut);
         return virtualOut;

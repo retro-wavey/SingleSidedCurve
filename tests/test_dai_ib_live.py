@@ -103,8 +103,8 @@ def test_migrate(
     usdt,
     stratms,
     Strategy,
-    strategy_dai_ib,
     live_strat_dai,
+    live_strat_dai_migrated,
     accounts,
     ibCurvePool,
     ib3CRV,
@@ -114,6 +114,7 @@ def test_migrate(
     chain,
     strategy_usdt_ib,
     live_vault_dai,
+    strategy_dai_ib,
     ychad,
     gov,
     strategist,
@@ -124,18 +125,38 @@ def test_migrate(
     currency = interface.ERC20(vault.token())
     decimals = currency.decimals()
     gov = accounts.at(vault.governance(), force=True)
-    strategy = strategy_dai_ib
+    strategy = live_strat_dai_migrated
 
     vault.migrateStrategy(live_strat_dai, strategy, {"from": gov})
+    assert live_strat_dai.estimatedTotalAssets() == 0
 
     genericStateOfStrat030(strategy, currency, vault)
     genericStateOfVault(vault, currency)
     print(strategy.curveTokensInYVault())
 
-    strategy.harvest({"from": strategist})
+    strategy.harvest({"from": gov})
     
     genericStateOfStrat030(strategy, currency, vault)
     genericStateOfVault(vault, currency)
+
+    vault.migrateStrategy(strategy, strategy_dai_ib, {"from": gov})
+    strategy = strategy_dai_ib
+
+    chain.mine(10)
+    chain.sleep(300)
+
+    strategy.harvest({"from": gov})
+    
+    genericStateOfStrat030(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+
+    vault.updateStrategyDebtRatio(strategy, 1100, {"from": gov})
+
+    strategy.harvest({"from": gov})
+    
+    genericStateOfStrat030(strategy, currency, vault)
+    genericStateOfVault(vault, currency)
+
 
 
 def test_snapshot(

@@ -37,6 +37,10 @@ def live_strat_dai(Strategy):
     yield Strategy.at('0x6a6B94A78cBA0F55BC4D41b37f2229427800B4dA')
 
 @pytest.fixture
+def live_strat_dai_migrated(Strategy):
+    yield Strategy.at('0x30010039Ea4a0c4fa1Ac051E8aF948239678353d')
+
+@pytest.fixture
 def live_strat_usdc(Strategy):
     yield Strategy.at('0x80af28cb1e44C44662F144475d7667C9C0aaB3C3')
 
