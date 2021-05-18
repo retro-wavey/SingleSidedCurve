@@ -80,6 +80,11 @@ def yvaultv2Obtc(interface):
 @pytest.fixture
 def yhbtcstrategyv2(Strategy):
     yield Strategy.at('0x91cBf0014a966615e1050c90A1aBf1d1d5d8cffd')
+
+@pytest.fixture
+def wbtcstrategynew(Strategy):
+    yield Strategy.at('0xb85413f6d07454828eAc7E62df7d847316475178')
+
 @pytest.fixture
 def ibyvault(Vault):
     yield Vault.at('0x27b7b1ad7288079A66d12350c828D3C00A6F07d7')
@@ -93,6 +98,10 @@ def live_wbtc_vault(pm):
     Vault = pm(config["dependencies"][0]).Vault
     vault = Vault.at('0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E')
     yield vault
+
+#@pytest.fixture
+#def live_strategy_wbtc(Strategy):
+#    yield Strategy.at('0x04A508664B053E0A08d5386303E649925CBF763c')
 
 @pytest.fixture
 def obCRV(interface):
