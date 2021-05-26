@@ -31,6 +31,7 @@ contract Strategy is BaseStrategy {
     using SafeMath for uint256;
 
     ICurveFi public curvePool;// =  ICurveFi(address(0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F));
+    ICurveFi public zapOut;
     ICrvV3 public curveToken;// = ICrvV3(address(0xb19059ebb43466C323583928285a49f558E572Fd));
 
     address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -61,31 +62,32 @@ contract Strategy is BaseStrategy {
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
         address _curvePool,
+        address _zapOut,
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
         bool _hasUnderlying
     ) public BaseStrategy(_vault) {
-         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _zapOut, _curveToken, _yvToken, _poolSize, _hasUnderlying);
     }
 
     function initialize(
         address _vault,
         address _strategist,
         address _rewards,
-        address _keeper,
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
         address _curvePool,
+        address _zapOut,
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
         bool _hasUnderlying
     ) external {
         //note: initialise can only be called once. in _initialize in BaseStrategy we have: require(address(want) == address(0), "Strategy already initialized");
-        _initialize(_vault, _strategist, _rewards, _keeper);
-        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+        _initialize(_vault, _strategist, _rewards, _strategist);
+        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _zapOut, _curveToken, _yvToken, _poolSize, _hasUnderlying);
     }
 
     function _initializeStrat(
@@ -93,6 +95,7 @@ contract Strategy is BaseStrategy {
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
         address _curvePool,
+        address _zapOut,
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
@@ -100,8 +103,9 @@ contract Strategy is BaseStrategy {
     ) internal {
         require(want_decimals == 0, "Already Initialized");
         require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
-        
+
         curvePool = ICurveFi(_curvePool);
+        zapOut = ICurveFi(_zapOut);
 
         if(curvePool.coins(0) == address(want) || (_hasUnderlying && curvePool.underlying_coins(0) == address(want) )){
             curveId =0;
@@ -133,7 +137,7 @@ contract Strategy is BaseStrategy {
         curveToken = ICrvV3(_curveToken);
 
         _setupStatics();
-        
+
     }
     function _setupStatics() internal {
         maxReportDelay = 86400;
@@ -144,6 +148,7 @@ contract Strategy is BaseStrategy {
         want_decimals = IERC20Extended(address(want)).decimals();
 
         want.safeApprove(address(curvePool), uint256(-1));
+        curveToken.approve(address(zapOut), uint256(-1));
         curveToken.approve(address(yvToken), uint256(-1));
     }
 
@@ -152,11 +157,11 @@ contract Strategy is BaseStrategy {
         address _vault,
         address _strategist,
         address _rewards,
-        address _keeper,
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
         address _curvePool,
+        address _zapOut,
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
@@ -173,7 +178,7 @@ contract Strategy is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _rewards, _keeper, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+        Strategy(newStrategy).initialize(_vault, _strategist, _rewards, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _zapOut, _curveToken, _yvToken, _poolSize, _hasUnderlying);
 
         emit Cloned(newStrategy);
 
@@ -213,7 +218,7 @@ contract Strategy is BaseStrategy {
         }
 
         //we want to choose lower value of virtual price and amount we really get out
-        //this means we will always underestimate current assets. 
+        //this means we will always underestimate current assets.
         uint256 virtualOut = virtualPriceToWant().mul(tokens).div(1e18);
 
         /*uint256 realOut;
@@ -222,7 +227,7 @@ contract Strategy is BaseStrategy {
         }else{
             realOut = curvePool.calc_withdraw_one_coin(tokens, curveId);
         }*/
-        
+
 
         //return Math.min(virtualOut, realOut);
         return virtualOut;
@@ -307,17 +312,17 @@ contract Strategy is BaseStrategy {
                 _debtPayment = wantBalance.sub(_profit);
             }
         }
-        
+
     }
 
     function harvestTrigger(uint256 callCost) public view override returns (bool) {
         uint256 wantCallCost;
-        
+
         if (address(want) == weth) {
             wantCallCost = callCost;
         } else  {
             wantCallCost = _ethToWant(callCost);
-        } 
+        }
 
         return super.harvestTrigger(wantCallCost);
     }
@@ -357,29 +362,29 @@ contract Strategy is BaseStrategy {
 
         uint256 vp = virtualPriceToWant();
         uint256 expectedOut = _wantToInvest.mul(1e18).div(vp);
-        
+
         uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
 
         uint256 roughOut;
 
         if(poolSize == 2){
-            uint256[2] memory amounts; 
+            uint256[2] memory amounts;
             amounts[uint256(curveId)] = _wantToInvest;
-            //note doesnt take into account underlying 
+            //note doesnt take into account underlying
             roughOut = curvePool.calc_token_amount(amounts, true);
-   
+
         }else if (poolSize == 3){
-            uint256[3] memory amounts; 
+            uint256[3] memory amounts;
             amounts[uint256(curveId)] = _wantToInvest;
             //note doesnt take into account underlying
             roughOut = curvePool.calc_token_amount(amounts, true);
-                    
+
         }else{
-            uint256[4] memory amounts; 
+            uint256[4] memory amounts;
             amounts[uint256(curveId)] = _wantToInvest;
             //note doesnt take into account underlying
             roughOut = curvePool.calc_token_amount(amounts, true);
-        }        
+        }
 
         if(roughOut >= maxSlip){
             return true;
@@ -401,40 +406,40 @@ contract Strategy is BaseStrategy {
             if(_checkSlip(_wantToInvest)){
 
                 uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
-        
+
                 uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
 
                 //pool size cannot be more than 4 or less than 2
                 if(poolSize == 2){
-                    uint256[2] memory amounts; 
+                    uint256[2] memory amounts;
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
                         curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
                         curvePool.add_liquidity(amounts, maxSlip);
                     }
-   
+
                 }else if (poolSize == 3){
-                    uint256[3] memory amounts; 
+                    uint256[3] memory amounts;
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
                         curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
                         curvePool.add_liquidity(amounts, maxSlip);
                     }
-                    
+
                 }else{
-                    uint256[4] memory amounts; 
+                    uint256[4] memory amounts;
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
                         curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
                         curvePool.add_liquidity(amounts, maxSlip);
                     }
-                    
+
                 }
 
-                
+
                 //now add to yearn
                 yvToken.deposit();
 
@@ -473,7 +478,7 @@ contract Strategy is BaseStrategy {
 
         uint256 wantBalanceBefore = want.balanceOf(address(this));
 
-        //let's take the amount we need if virtual price is real. Let's add the 
+        //let's take the amount we need if virtual price is real. Let's add the
         uint256 virtualPrice = virtualPriceToWant();
         uint256 amountWeNeedFromVirtualPrice = _amount.mul(1e18).div(virtualPrice);
 
@@ -483,7 +488,7 @@ contract Strategy is BaseStrategy {
         uint256 amountFromVault = amountWeNeedFromVirtualPrice.mul(1e18).div(pricePerFullShare);
 
         uint256 yBalance =  yvToken.balanceOf(address(this));
-        
+
 
         if(amountFromVault > yBalance){
 
@@ -511,11 +516,11 @@ contract Strategy is BaseStrategy {
         }
 
         if(hasUnderlying){
-            curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage, true);
+            zapOut.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage, true);
         }else{
-            curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
+            zapOut.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
         }
-        
+
 
         uint256 diff = want.balanceOf(address(this)).sub(wantBalanceBefore);
 
@@ -534,7 +539,7 @@ contract Strategy is BaseStrategy {
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
     }
 
-    
+
 
 
     // Override this to add all tokens/tokenized positions this contract manages
@@ -559,7 +564,7 @@ contract Strategy is BaseStrategy {
 
         address[] memory protected = new address[](1);
           protected[0] = address(yvToken);
-    
+
           return protected;
     }
 }
