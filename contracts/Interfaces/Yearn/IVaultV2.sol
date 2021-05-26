@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IVaultV2 is IERC20 {
-
-    function addStrategy(address, uint256, uint256, uint256) external;
-
+    function addStrategy(
+        address,
+        uint256,
+        uint256,
+        uint256
+    ) external;
 
     function name() external view returns (string calldata);
 
@@ -31,16 +33,23 @@ interface IVaultV2 is IERC20 {
 
     function deposit(uint256 amount) external returns (uint256);
 
-    function deposit(uint256 amount, address recipient) external returns (uint256);
+    function deposit(uint256 amount, address recipient)
+        external
+        returns (uint256);
 
     // NOTE: Vyper produces multiple signatures for a given function with "default" args
     function withdraw() external returns (uint256);
 
     function withdraw(uint256 maxShares) external returns (uint256);
+
     function setManagementFee(uint256) external;
+
     function updateStrategyDebtRatio(address, uint256) external;
 
-    function withdraw(uint256 maxShares, address recipient) external returns (uint256);
+    function withdraw(uint256 maxShares, address recipient)
+        external
+        returns (uint256);
+
     function withdrawalQueue(uint256) external view returns (address);
 
     function token() external view returns (address);
@@ -52,7 +61,11 @@ interface IVaultV2 is IERC20 {
     function depositLimit() external view returns (uint256);
 
     function maxAvailableShares() external view returns (uint256);
-    function strategies(address _strategy) external view returns (StrategyParams memory);
+
+    function strategies(address _strategy)
+        external
+        view
+        returns (StrategyParams memory);
 
     /**
      * View how much the Vault would increase this Strategy's borrow limit,
@@ -119,6 +132,7 @@ interface IVaultV2 is IERC20 {
      * is subject to guardian defined by the Vault.
      */
     function guardian() external view returns (address);
+
     function setDepositLimit(uint256) external;
 }
 
