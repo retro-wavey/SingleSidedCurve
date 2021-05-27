@@ -120,6 +120,8 @@ def vault(pm, gov, rewards, guardian, currency):
     vault = gov.deploy(Vault)
     vault.initialize(currency, gov, rewards, "", "", guardian)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    vault.setPerformanceFee(0, {'from': gov})
+    vault.setManagementFee(0, {'from': gov})
     yield vault
 
 
@@ -160,8 +162,6 @@ def proxy_bytes(synth_symbol):
 
 @pytest.fixture(scope='session')
 def synth(resolver, proxy_bytes):
-    
-
     yield Contract(resolver.getAddress(proxy_bytes))
 
 
@@ -184,6 +184,7 @@ def curveToken(interface, synth_symbol):
         b"sLINK": "0xcee60cfa923170e4f8204ae08b4fa6a3f5656f3a",
     }
     yield interface.ICrvV3(curveTokens[synth_symbol])
+
 @pytest.fixture(scope='session')
 def curvePool(interface, synth_symbol, request):
     pools = {
@@ -234,6 +235,6 @@ def cloned_strategy(strategist, vault, strategy, curvePool, curveToken, yvault, 
         proxy_bytes,
         {"from": strategist},
     ).return_value
-
+    
     vault.addStrategy(cloned_strategy, 10_000, 0, 2 ** 256 - 1, 0, {'from': gov})
     yield Contract.from_abi("Strategy", cloned_strategy, strategy.abi)
