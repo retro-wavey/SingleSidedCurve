@@ -16,7 +16,6 @@ import "./Interfaces/synthetix/IAddressResolver.sol";
 contract Synthetix {
     using SafeMath for uint256;
 
-    uint256 public SUSD_BUFFER = 1_000; // 10% (over 10_000 BPS) amount of sUSD that should not be exchanged for sETH
     // ========== SYNTHETIX CONFIGURATION ==========
     bytes32 public constant sUSD = "sUSD";
     bytes32 public synthCurrencyKey;

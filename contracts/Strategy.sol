@@ -35,6 +35,8 @@ contract Strategy is BaseStrategy, Synthetix {
     ICurveFi public curvePool; // =  ICurveFi(address(0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F));
     ICrvV3 public curveToken; // = ICrvV3(address(0xb19059ebb43466C323583928285a49f558E572Fd));
 
+    uint256 public susdBuffer = 1_000; // 10% (over 10_000 BPS) amount of sUSD that should not be exchanged for sETH
+
     address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant uniswapRouter =
         0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
@@ -166,6 +168,7 @@ contract Strategy is BaseStrategy, Synthetix {
         debtThreshold = 100 * 1e18;
         withdrawProtection = true;
         maxLoss = 1;
+        susdBuffer = 1_000; // 10% over 10_000 BIPS
         synth_decimals = IERC20Extended(address(_synthCoin())).decimals();
         want.safeApprove(address(curvePool), uint256(-1));
         curveToken.approve(address(yvToken), uint256(-1));
@@ -226,6 +229,15 @@ contract Strategy is BaseStrategy, Synthetix {
         onlyAuthorized
     {
         minTimePerInvest = _minTimePerInvest;
+    }
+
+    function updateSUSDBuffer(uint256 _susdBuffer)
+        public
+        onlyAuthorized
+    {
+        // IN BIPS
+        require(_susdBuffer <= 10_000, "!too high");
+        susdBuffer = _susdBuffer;
     }
 
     function updatemaxSingleInvest(uint256 _maxSingleInvest)
@@ -451,8 +463,8 @@ contract Strategy is BaseStrategy, Synthetix {
 
             // we calculate how much we need to keep as buffer
             // all the amount over it is converted into Synth 
-            uint256 totalDebt = vault.strategies(address(this)).totalDebt;
-            uint256 buffer = totalDebt.mul(SUSD_BUFFER).div(DENOMINATOR);
+            uint256 totalDebt = vault.strategies(address(this)).totalDebt; // in sUSD (want)
+            uint256 buffer = totalDebt.mul(susdBuffer).div(DENOMINATOR);
             _sUSDToInvest = _sUSDToInvest > buffer ? _sUSDToInvest.sub(buffer) : 0;
             _sUSDToInvest = Math.min(_sUSDToInvest, _sUSDFromSynth(maxSingleInvest));
             if (_sUSDToInvest == 0) {
