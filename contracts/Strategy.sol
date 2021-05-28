@@ -112,6 +112,8 @@ contract Strategy is BaseStrategy, Synthetix {
     ) internal {
         require(synth_decimals == 0, "Already Initialized");
         require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
+        require(address(want) == address(_synthsUSD()), "want must be sUSD");
+        
         curvePool = ICurveFi(_curvePool);
         
         if (
@@ -330,6 +332,9 @@ contract Strategy is BaseStrategy, Synthetix {
         }
 
         uint256 toFree = _debtPayment.add(_profit);
+        // if the strategy needs to exchange sETH into sUSD, the waiting period will kick in and the vault.report will revert !!!
+        // this only works if the strategy has been previously unwinded using BUFFER = 100% OR manual function
+        // otherwise, max amount "toFree" is wantBalance (which should be the buffer, which should be setted to be able to serve profit taking)
         if (toFree > wantBalance) {
             toFree = toFree.sub(wantBalance);
 
@@ -442,7 +447,14 @@ contract Strategy is BaseStrategy, Synthetix {
         if(_exchanger().maxSecsLeftInWaitingPeriod(address(this), synthCurrencyKey) != 0 || _synthToInvest == 0){
             // This will invest all available sUSD (exchanging to Synth first)
             // Exchange amount of sUSD to Synth
-            uint256 _sUSDToInvest = Math.min(_balanceOfSUSD(), _sUSDFromSynth(maxSingleInvest));
+            uint256 _sUSDToInvest = _balanceOfSUSD();
+
+            // we calculate how much we need to keep as buffer
+            // all the amount over it is converted into Synth 
+            uint256 totalDebt = vault.strategies(address(this)).totalDebt;
+            uint256 buffer = totalDebt.mul(SUSD_BUFFER).div(DENOMINATOR);
+            _sUSDToInvest = _sUSDToInvest > buffer ? _sUSDToInvest.sub(buffer) : 0;
+            _sUSDToInvest = Math.min(_sUSDToInvest, _sUSDFromSynth(maxSingleInvest));
             if (_sUSDToInvest == 0) {
                 return;
             }

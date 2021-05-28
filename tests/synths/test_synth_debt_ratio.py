@@ -33,4 +33,3 @@ def test_synth_debt_ratio(vault, susd, susd_whale, yvault, curvePool, synth, clo
     assert synth.balanceOf(cloned_strategy) == 0
     assert susd.balanceOf(cloned_strategy) > 0
     assert yvault.balanceOf(cloned_strategy) < 10_000 # dust set
-

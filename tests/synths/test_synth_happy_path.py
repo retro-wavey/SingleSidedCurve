@@ -17,11 +17,20 @@ def test_synth_happy_path(vault, susd, susd_whale, yvault, curvePool, synth, clo
     tx = cloned_strategy.harvest({'from': gov})
     assert yvault.balanceOf(cloned_strategy) == 0
     assert synth.balanceOf(cloned_strategy) > 0
+    assert susd.balanceOf(cloned_strategy) > 0 
+    assert susd.balanceOf(cloned_strategy) == vault.strategies(cloned_strategy).dict()['totalDebt'] * 0.1
+
     chain.sleep(360 + 1) # over 6 mins 
     chain.mine(1)
     tx = cloned_strategy.harvest({'from': gov})
+    # chain.sleep(360 + 1) # over 6 mins 
+    # chain.mine(1)
     assert yvault.balanceOf(cloned_strategy) > 0
     assert synth.balanceOf(cloned_strategy) == 0
-    
+    assert susd.balanceOf(cloned_strategy) == vault.strategies(cloned_strategy).dict()['totalDebt'] * 0.1
+
+    # TODO: generate revenue to force the strategy to take profit
+
+    tx = cloned_strategy.harvest({'from': gov})
 
     assert False 

@@ -18,6 +18,7 @@ def test_synth_shutdown(vault, susd, susd_whale, yvault, curvePool, synth, clone
     assert synth.balanceOf(cloned_strategy) == 0
 
     cloned_strategy.manualRemoveFullLiquidity({'from': gov})
+    assert susd.balanceOf(cloned_strategy) > 0
     chain.sleep(360+1) # over 6 mins
     chain.mine()
 
