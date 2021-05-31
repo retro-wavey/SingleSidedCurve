@@ -262,6 +262,7 @@ contract Strategy is BaseStrategy, Synthetix {
     }
 
     function updateMaxLoss(uint256 _maxLoss) public onlyAuthorized {
+        require(_maxLoss <= 10_000);
         maxLoss = _maxLoss;
     }
 
@@ -277,6 +278,7 @@ contract Strategy is BaseStrategy, Synthetix {
         uint256 totalCurveTokens =
             curveTokensInYVault().add(curveToken.balanceOf(address(this)));
         // NOTE: want is always sUSD so we directly use _balanceOfSUSD
+        // NOTE: _synthToSUSD takes into account future fees in which the strategy will incur for exchanging synth for sUSD  
         return
             _balanceOfSUSD().add(_synthToSUSD(_balanceOfSynth())).add(
                 curveTokenToWant(totalCurveTokens)
@@ -339,6 +341,9 @@ contract Strategy is BaseStrategy, Synthetix {
         if (debt < currentValue) {
             //profit
             _profit = currentValue.sub(debt);
+            // NOTE: the strategy will only be able to serve profit payment up to buffer amount
+            // we limit profit and try to delay its reporting until there is enough unlocked want to repay it to the vault
+            _profit = Math.min(wantBalance, _profit);
         } else {
             _loss = debt.sub(currentValue);
         }
@@ -399,17 +404,30 @@ contract Strategy is BaseStrategy, Synthetix {
         return amounts[amounts.length - 1];
     }
 
+    event Numbers(uint a, uint b, uint c, uint d);
     function adjustPosition(uint256 _debtOutstanding) internal override {
         if (lastInvest.add(minTimePerInvest) > block.timestamp) {
             return;
         }
 
         // 1. Check if we can invest Synth
-        uint256 _synthToInvest = _balanceOfSynth();
-        
-        // if we cannot invest synth (either due to Synthetix waiting period OR because we don't have enough)
-        // we buy synth with sUSD and return (due to Synthetix waiting period)
-        if(_exchanger().maxSecsLeftInWaitingPeriod(address(this), synthCurrencyKey) == 0 && _synthToInvest > 0){
+        uint256 looseSynth = _balanceOfSynth();
+        uint256 _sUSDBalance = _balanceOfSUSD();
+
+        // we calculate how much we need to keep in buffer
+        // all the amount over it will be converted into Synth
+        uint256 totalDebt = vault.strategies(address(this)).totalDebt; // in sUSD (want)
+        uint256 buffer = totalDebt.mul(susdBuffer).div(DENOMINATOR);
+
+        uint256 _sUSDToInvest = _sUSDBalance > buffer ? _sUSDBalance.sub(buffer) : 0;
+        uint256 _sUSDNeeded = _sUSDToInvest == 0 ? buffer.sub(_sUSDBalance) : 0;
+        uint256 _synthToSell = _sUSDNeeded > 0 ? _synthFromSUSD(_sUSDNeeded) : 0; // amount of Synth that we need to sell to refill buffer
+        uint256 _synthToInvest = looseSynth > _synthToSell ? looseSynth.sub(_synthToSell) : 0;
+        emit Numbers(_sUSDToInvest, _sUSDNeeded, _synthToSell, _synthToInvest);
+        // how much loose Synth, available to invest, we will have after buying sUSD?
+        // if we cannot invest synth (either due to Synthetix waiting period OR because we don't have enough available)
+        // we buy synth with sUSD and return (due to Synthetix waiting period we cannot do anything else)
+        if(_exchanger().maxSecsLeftInWaitingPeriod(address(this), synthCurrencyKey) == 0 && _synthToInvest > DUST_THRESHOLD){
             // 2. Supply liquidity (single sided) to Curve Pool
             // calculate LP tokens that we will receive
             uint256 expectedOut =
@@ -451,27 +469,37 @@ contract Strategy is BaseStrategy, Synthetix {
             }
 
             // 3. Deposit LP tokens in yVault
-            yvToken.deposit();
+            uint256 lpBalance = curveToken.balanceOf(address(this));
+            if(lpBalance > 0){
+                ensureAllowance(address(yvToken), address(curveToken), lpBalance);
+                yvToken.deposit();
+            }
             lastInvest = block.timestamp;
         }
 
-        // we buy synth with sUSD and return (due to Synthetix waiting period)
-        if(_exchanger().maxSecsLeftInWaitingPeriod(address(this), synthCurrencyKey) != 0 || _synthToInvest == 0){
+        if(_synthToSell == 0){
             // This will invest all available sUSD (exchanging to Synth first)
             // Exchange amount of sUSD to Synth
-            uint256 _sUSDToInvest = _balanceOfSUSD();
-
-            // we calculate how much we need to keep as buffer
-            // all the amount over it is converted into Synth 
-            uint256 totalDebt = vault.strategies(address(this)).totalDebt; // in sUSD (want)
-            uint256 buffer = totalDebt.mul(susdBuffer).div(DENOMINATOR);
-            _sUSDToInvest = _sUSDToInvest > buffer ? _sUSDToInvest.sub(buffer) : 0;
             _sUSDToInvest = Math.min(_sUSDToInvest, _sUSDFromSynth(maxSingleInvest));
             if (_sUSDToInvest == 0) {
                 return;
             }
             exchangeSUSDToSynth(_sUSDToInvest);
             // now the waiting period starts
+            emit Numbers(1, _sUSDToInvest, _balanceOfSUSD(), _balanceOfSynth());
+
+        } else if (_synthToSell >= DUST_THRESHOLD) {
+            // this means that we need to refill the buffer
+            // we may have already some uninvested Synth so we use it (and avoid withdrawing from Curve's Pool)
+            uint256 available = _synthToSUSD(_balanceOfSynth());
+            uint256 sUSDToWithdraw = _sUSDNeeded > available ? _sUSDNeeded.sub(available) : 0;
+            // this will withdraw and sell full balance of Synth
+            
+            if(sUSDToWithdraw > 0) {
+                withdrawSomeWant(sUSDToWithdraw);
+            }
+            // now the waiting period starts
+            emit Numbers(2, available, sUSDToWithdraw, _balanceOfSynth());
         }
     }
 
@@ -533,48 +561,50 @@ contract Strategy is BaseStrategy, Synthetix {
             _amount = _amountOfCrv.mul(virtualPrice).div(1e18);
         }
 
-        // Added explicit maxLoss protection in case something goes wrong
-        yvToken.withdraw(amountFromVault, address(this), maxLoss);
+        if(amountFromVault > 0) {
+            // Added explicit maxLoss protection in case something goes wrong
+            yvToken.withdraw(amountFromVault, address(this), maxLoss);
 
-        if (withdrawProtection) {
-            //this tests that we liquidated all of the expected ytokens. Without it if we get back less then will mark it is loss
-            require(
-                yBalance.sub(yvToken.balanceOf(address(this))) >=
-                    amountFromVault.sub(1),
-                "YVAULTWITHDRAWFAILED"
-            );
-        }
+            if (withdrawProtection) {
+                //this tests that we liquidated all of the expected ytokens. Without it if we get back less then will mark it is loss
+                require(
+                    yBalance.sub(yvToken.balanceOf(address(this))) >=
+                        amountFromVault.sub(1),
+                    "YVAULTWITHDRAWFAILED"
+                );
+            }
 
-        // 3. Get coins back by burning LP tokens
-        // We are going to burn the amount of LP tokens we just withdrew
-        uint256 toBurn =
-            curveToken.balanceOf(address(this)).sub(crvBeforeBalance);
+            // 3. Get coins back by burning LP tokens
+            // We are going to burn the amount of LP tokens we just withdrew
+            uint256 toBurn =
+                curveToken.balanceOf(address(this)).sub(crvBeforeBalance);
 
-        // amount of synth we expect to receive
-        uint256 toWithdraw = toBurn.mul(virtualPriceToSynth()).div(1e18);
+            // amount of synth we expect to receive
+            uint256 toWithdraw = toBurn.mul(virtualPriceToSynth()).div(1e18);
 
-        // minimum amount of coins we are going to receive
-        uint256 minAmount =
-            toWithdraw.mul(DENOMINATOR.sub(slippageProtectionOut)).div(
-                DENOMINATOR
-            );
+            // minimum amount of coins we are going to receive
+            uint256 minAmount =
+                toWithdraw.mul(DENOMINATOR.sub(slippageProtectionOut)).div(
+                    DENOMINATOR
+                );
 
-        //if we have less than 18 decimals we need to lower the amount out
-        if (synth_decimals < 18) {
-            minAmount = minAmount.div(
-                10**(uint256(uint8(18) - synth_decimals))
-            );
-        }
+            //if we have less than 18 decimals we need to lower the amount out
+            if (synth_decimals < 18) {
+                minAmount = minAmount.div(
+                    10**(uint256(uint8(18) - synth_decimals))
+                );
+            }
 
-        if (hasUnderlying) {
-            curvePool.remove_liquidity_one_coin(
-                toBurn,
-                curveId,
-                minAmount,
-                true
-            );
-        } else {
-            curvePool.remove_liquidity_one_coin(toBurn, curveId, minAmount);
+            if (hasUnderlying) {
+                curvePool.remove_liquidity_one_coin(
+                    toBurn,
+                    curveId,
+                    minAmount,
+                    true
+                );
+            } else {
+                curvePool.remove_liquidity_one_coin(toBurn, curveId, minAmount);
+            }
         }
 
         // 4. Exchange the full balance of Synth for sUSD (want)
