@@ -36,42 +36,52 @@ def test_buffer(
     print("Post eCRV PSS", yvault.pricePerShare())
 
     # harvest to invest and go to steady state
-    tx = cloned_strategy.harvest({'from': gov}) # this harvest will record profits
+    tx = cloned_strategy.harvest({"from": gov})  # this harvest will record profits
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
-    tx = cloned_strategy.harvest({'from': gov}) # we harvest again to manage initial changes and get to steady state
+    tx = cloned_strategy.harvest(
+        {"from": gov}
+    )  # we harvest again to manage initial changes and get to steady state
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
 
     # NOW THE TEST BEGINS
     # cannot set it higher than 100%
     with reverts():
-        cloned_strategy.updateSUSDBuffer(10_001, {'from': gov})
+        cloned_strategy.updateSUSDBuffer(10_001, {"from": gov})
 
     # up to 25% buffer (from 10%)
     print("10% -> 25%")
-    cloned_strategy.updateSUSDBuffer(2_500, {'from': gov})
+    cloned_strategy.updateSUSDBuffer(2_500, {"from": gov})
     vault.deposit(Wei("10000 ether"), {"from": susd_whale})
 
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
-    assert susd.balanceOf(cloned_strategy) * 4 == pytest.approx(vault.strategies(cloned_strategy).dict()["totalDebt"])
+    assert susd.balanceOf(cloned_strategy) * 4 == pytest.approx(
+        vault.strategies(cloned_strategy).dict()["totalDebt"]
+    )
 
     # back down to 10% (from 25%)
-    cloned_strategy.updateSUSDBuffer(1_000, {'from': gov})
+    cloned_strategy.updateSUSDBuffer(1_000, {"from": gov})
     print("25% -> 10%")
 
     # this harvest should invest the amount of buffer that we don't require anymore
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
-    assert tx.events['ExchangeEntryAppended']['dest'] == cloned_strategy.synthCurrencyKey() # an exchange (sUSD => sETH) happened
-    assert tx.events['ExchangeEntryAppended']['amount'] >= 0.15 * (vault.strategies(cloned_strategy).dict()["totalDebt"])
-    assert susd.balanceOf(cloned_strategy) * 10 == pytest.approx(vault.strategies(cloned_strategy).dict()["totalDebt"])
+    assert (
+        tx.events["ExchangeEntryAppended"]["dest"] == cloned_strategy.synthCurrencyKey()
+    )  # an exchange (sUSD => sETH) happened
+    assert tx.events["ExchangeEntryAppended"]["amount"] >= 0.15 * (
+        vault.strategies(cloned_strategy).dict()["totalDebt"]
+    )
+    assert susd.balanceOf(cloned_strategy) * 10 == pytest.approx(
+        vault.strategies(cloned_strategy).dict()["totalDebt"]
+    )
 
     # go to 100% buffer (any new amount that gets into the strategy is not invested) (from 10%)
-    cloned_strategy.updateSUSDBuffer(10_000, {'from': gov})
+    cloned_strategy.updateSUSDBuffer(10_000, {"from": gov})
     print("10% -> 100%")
 
     # new deposits should directly increase susd balance, not yvault balance
@@ -81,10 +91,10 @@ def test_buffer(
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
-    assert yvault.balanceOf(cloned_strategy) <= 5 # rounding errors
-    assert prevBalance < susd.balanceOf(cloned_strategy) 
+    assert yvault.balanceOf(cloned_strategy) <= 5  # rounding errors
+    assert prevBalance < susd.balanceOf(cloned_strategy)
     # go to 0% buffer (no amount of sUSD is kept uninvested) (from 100%)
-    cloned_strategy.updateSUSDBuffer(0, {'from': gov})
+    cloned_strategy.updateSUSDBuffer(0, {"from": gov})
     print("100% -> 0%")
 
     prevYVault = yvault.balanceOf(cloned_strategy)
@@ -102,10 +112,12 @@ def test_buffer(
     cloned_strategy.manualRemoveFullLiquidity({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
-    # back to 10% 
-    cloned_strategy.updateSUSDBuffer(1_000, {'from': gov})
+    # back to 10%
+    cloned_strategy.updateSUSDBuffer(1_000, {"from": gov})
     print("0% -> 10%")
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
-    assert susd.balanceOf(cloned_strategy)*10 == pytest.approx(vault.strategies(cloned_strategy).dict()['totalDebt'])
+    assert susd.balanceOf(cloned_strategy) * 10 == pytest.approx(
+        vault.strategies(cloned_strategy).dict()["totalDebt"]
+    )

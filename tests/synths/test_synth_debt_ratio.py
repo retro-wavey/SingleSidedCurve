@@ -25,9 +25,11 @@ def test_synth_debt_ratio(
     )  # this will record losses (due to exchange fees)
     chain.sleep(360 + 1)  # 6 mins
     chain.mine()
-    
+
     assert yvault.balanceOf(cloned_strategy) > 0
-    assert synth.balanceOf(cloned_strategy) > 0 # due to losses, buffer is smaller so it is invested
+    assert (
+        synth.balanceOf(cloned_strategy) > 0
+    )  # due to losses, buffer is smaller so it is invested
 
     vault.updateStrategyDebtRatio(cloned_strategy, 0, {"from": gov})
 

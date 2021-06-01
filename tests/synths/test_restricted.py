@@ -23,21 +23,13 @@ def test_restricted(susd_whale, strategy, live_susd_vault):
 
     with reverts():
         strategy.updateSlippageProtectionIn(0, {"from": rando})
-    strategy.updateSlippageProtectionIn(
-        0, {"from": strategy.strategist()}
-    )
-    strategy.updateSlippageProtectionIn(
-        0, {"from": gov}
-    )
+    strategy.updateSlippageProtectionIn(0, {"from": strategy.strategist()})
+    strategy.updateSlippageProtectionIn(0, {"from": gov})
 
     with reverts():
         strategy.updateSlippageProtectionOut(0, {"from": rando})
-    strategy.updateSlippageProtectionOut(
-        0, {"from": strategy.strategist()}
-    )
-    strategy.updateSlippageProtectionOut(
-        0, {"from": gov}
-    )
+    strategy.updateSlippageProtectionOut(0, {"from": strategy.strategist()})
+    strategy.updateSlippageProtectionOut(0, {"from": gov})
 
     with reverts():
         strategy.updateMaxLoss(0, {"from": rando})

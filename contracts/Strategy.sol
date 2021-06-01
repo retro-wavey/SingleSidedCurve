@@ -77,8 +77,7 @@ contract Strategy is BaseStrategy, Synthetix {
             _curveToken,
             _yvToken,
             _poolSize,
-            _hasUnderlying,
-            _synth
+            _hasUnderlying
         );
     }
 
@@ -99,8 +98,7 @@ contract Strategy is BaseStrategy, Synthetix {
             _curveToken,
             _yvToken,
             _poolSize,
-            _hasUnderlying,
-            _synth
+            _hasUnderlying
         );
     }
 
@@ -109,8 +107,7 @@ contract Strategy is BaseStrategy, Synthetix {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _hasUnderlying,
-        bytes32 _synth
+        bool _hasUnderlying
     ) internal {
         require(synth_decimals == 0, "Already Initialized");
         require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
@@ -170,8 +167,8 @@ contract Strategy is BaseStrategy, Synthetix {
         maxLoss = 1;
         susdBuffer = 1_000; // 10% over 10_000 BIPS
         synth_decimals = IERC20Extended(address(_synthCoin())).decimals();
-        want.safeApprove(address(curvePool), uint256(-1));
-        curveToken.approve(address(yvToken), uint256(-1));
+        want.safeApprove(address(curvePool), type(uint256).max);
+        curveToken.approve(address(yvToken), type(uint256).max);
     }
 
     event Cloned(address indexed clone);
@@ -404,7 +401,6 @@ contract Strategy is BaseStrategy, Synthetix {
         return amounts[amounts.length - 1];
     }
 
-    event Numbers(uint a, uint b, uint c, uint d);
     function adjustPosition(uint256 _debtOutstanding) internal override {
         if (lastInvest.add(minTimePerInvest) > block.timestamp) {
             return;
@@ -423,7 +419,6 @@ contract Strategy is BaseStrategy, Synthetix {
         uint256 _sUSDNeeded = _sUSDToInvest == 0 ? buffer.sub(_sUSDBalance) : 0;
         uint256 _synthToSell = _sUSDNeeded > 0 ? _synthFromSUSD(_sUSDNeeded) : 0; // amount of Synth that we need to sell to refill buffer
         uint256 _synthToInvest = looseSynth > _synthToSell ? looseSynth.sub(_synthToSell) : 0;
-        emit Numbers(_sUSDToInvest, _sUSDNeeded, _synthToSell, _synthToInvest);
         // how much loose Synth, available to invest, we will have after buying sUSD?
         // if we cannot invest synth (either due to Synthetix waiting period OR because we don't have enough available)
         // we buy synth with sUSD and return (due to Synthetix waiting period we cannot do anything else)
@@ -486,8 +481,6 @@ contract Strategy is BaseStrategy, Synthetix {
             }
             exchangeSUSDToSynth(_sUSDToInvest);
             // now the waiting period starts
-            emit Numbers(1, _sUSDToInvest, _balanceOfSUSD(), _balanceOfSynth());
-
         } else if (_synthToSell >= DUST_THRESHOLD) {
             // this means that we need to refill the buffer
             // we may have already some uninvested Synth so we use it (and avoid withdrawing from Curve's Pool)
@@ -499,7 +492,6 @@ contract Strategy is BaseStrategy, Synthetix {
                 withdrawSomeWant(sUSDToWithdraw);
             }
             // now the waiting period starts
-            emit Numbers(2, available, sUSDToWithdraw, _balanceOfSynth());
         }
     }
 

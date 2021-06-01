@@ -3,7 +3,16 @@ from brownie import config, Contract, Wei, chain
 
 
 def test_synth_happy_path(
-    vault, susd, susd_whale, yvault, curvePool, synth, cloned_strategy, curveToken, gov, crv_whale
+    vault,
+    susd,
+    susd_whale,
+    yvault,
+    curvePool,
+    synth,
+    cloned_strategy,
+    curveToken,
+    gov,
+    crv_whale,
 ):
     print("yVault", yvault)
     print("CurvePool", curvePool)
@@ -28,8 +37,10 @@ def test_synth_happy_path(
 
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
-    tx = cloned_strategy.harvest({"from": gov})  # this harvest will record losses from exchange fees, reducing debt ratio
-    chain.sleep(360 + 1) # over 6 mins
+    tx = cloned_strategy.harvest(
+        {"from": gov}
+    )  # this harvest will record losses from exchange fees, reducing debt ratio
+    chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
     assert yvault.balanceOf(cloned_strategy) > 0
     assert synth.balanceOf(cloned_strategy) > 0
@@ -47,11 +58,10 @@ def test_synth_happy_path(
 
     # simulate huge profit (higher than buffer)
     print("Prev eCRV PSS", yvault.pricePerShare())
-    amount = curveToken.balanceOf(crv_whale)/4
-    if(synth.symbol() == 'sETH'):
-        amount = Wei('50000 ether')
-    
-    
+    amount = curveToken.balanceOf(crv_whale) / 4
+    if synth.symbol() == "sETH":
+        amount = Wei("50000 ether")
+
     curveToken.transfer(yvault, amount, {"from": crv_whale})
     print("Post eCRV PSS", yvault.pricePerShare())
 
@@ -77,7 +87,7 @@ def test_synth_happy_path(
         - vault.strategies(cloned_strategy).dict()["totalDebt"]
     )
     tx = cloned_strategy.harvest({"from": gov})
-    chain.sleep(360+1)
+    chain.sleep(360 + 1)
     chain.mine()
     assert synth.balanceOf(cloned_strategy) > 0
     assert susd.balanceOf(cloned_strategy) > 0  # buffer
@@ -92,7 +102,9 @@ def test_synth_happy_path(
     )
     assert loose_susd > actual_profit
     tx = cloned_strategy.harvest({"from": gov})
-    chain.sleep(360+1)
+    chain.sleep(360 + 1)
     chain.mine()
 
-    assert vault.strategies(cloned_strategy).dict()['totalDebt']*0.1 == pytest.approx(susd.balanceOf(cloned_strategy))
+    assert vault.strategies(cloned_strategy).dict()["totalDebt"] * 0.1 == pytest.approx(
+        susd.balanceOf(cloned_strategy)
+    )

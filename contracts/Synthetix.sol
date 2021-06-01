@@ -21,7 +21,7 @@ contract Synthetix {
     bytes32 public synthCurrencyKey;
 
     bytes32 internal constant TRACKING_CODE =
-        0x594541524e000000000000000000000000000000000000000000000000000000;
+        "YEARN";
 
     // ========== ADDRESS RESOLVER CONFIGURATION ==========
     bytes32 private constant CONTRACT_SYNTHETIX = "Synthetix";
@@ -37,9 +37,7 @@ contract Synthetix {
         // sETH / sBTC / sEUR / sLINK
         contractSynth = _synth;
         synthCurrencyKey = ISynth(IReadProxy(address(resolver().getAddress(_synth))).target()).currencyKey();
-        emit Synths(address(_synthCoin()), synthCurrencyKey, _synth);
     }
-    event Synths(address coin, bytes32 key, bytes32 cont);
 
     function _balanceOfSynth() internal view returns (uint256) {
         return IERC20(address(_synthCoin())).balanceOf(address(this));

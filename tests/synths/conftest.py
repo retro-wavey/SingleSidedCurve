@@ -192,15 +192,17 @@ def curveToken(interface, synth_symbol):
     }
     yield interface.ICrvV3(curveTokens[synth_symbol])
 
+
 @pytest.fixture(scope="session")
 def crv_whale(synth_symbol):
     whales = {
         b"sETH": "0x3c0ffff15ea30c35d7a85b85c0782d6c94e1d238",
-        b"sBTC": "0x13c1542a468319688b89e323fe9a3be3a90ebb27",#synthetix curve pool
-        b"sEUR": "0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde",#ytreasury 
+        b"sBTC": "0x13c1542a468319688b89e323fe9a3be3a90ebb27",  # synthetix curve pool
+        b"sEUR": "0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde",  # ytreasury
         b"sLINK": "0xfd4d8a17df4c27c1dd245d153ccf4499e806c87d",
     }
     yield (whales[synth_symbol])
+
 
 @pytest.fixture(scope="session")
 def curvePool(interface, synth_symbol, request):
@@ -265,6 +267,6 @@ def cloned_strategy(
         {"from": strategist},
     ).return_value
     cloned_strategy = Contract.from_abi("Strategy", cloned_strategy, strategy.abi)
-    cloned_strategy.updateSlippageProtectionOut(100, {'from': gov})
+    cloned_strategy.updateSlippageProtectionOut(100, {"from": gov})
     vault.addStrategy(cloned_strategy, 10_000, 0, 2 ** 256 - 1, 0, {"from": gov})
     yield cloned_strategy
