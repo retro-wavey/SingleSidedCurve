@@ -80,7 +80,7 @@ def test_revoke_with_profit(susd, synth, vault, curveToken, crv_whale, yvault, c
     chain.sleep(6 * 60 + 1)
     chain.mine()
 
-    curveToken.transfer(yvault, Wei("1000 ether"), {"from": crv_whale})
+    curveToken.transfer(yvault, Wei("50000 ether"), {"from": crv_whale})
 
     vault.revokeStrategy(strategy.address, {"from": gov})
 
