@@ -101,6 +101,7 @@ def test_synth_happy_path(
         - vault.strategies(cloned_strategy).dict()["totalDebt"]
     )
     assert loose_susd > actual_profit
+    # it repays profit in vault.report and then should refill the buffer
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)
     chain.mine()

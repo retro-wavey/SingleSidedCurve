@@ -502,8 +502,7 @@ contract Strategy is BaseStrategy, Synthetix {
             uint256 available = _synthToSUSD(_balanceOfSynth());
             uint256 sUSDToWithdraw =
                 _sUSDNeeded > available ? _sUSDNeeded.sub(available) : 0;
-            // this will withdraw and sell full balance of Synth
-
+            // this will withdraw and sell full balance of Synth (inside withdrawSomeWant)
             if (sUSDToWithdraw > 0) {
                 withdrawSomeWant(sUSDToWithdraw);
             }
