@@ -152,8 +152,8 @@ def clean(chain):
 @pytest.fixture(
     params=[
         "sETH",
-        # "sBTC", // curve contract is old. it requires another interface with int128
-        # "sEUR", // not deployed
+        # "sBTC", # curve contract is old. it requires another interface with int128
+        "sEUR",
         "sLINK",
     ],
     scope="session",
@@ -168,7 +168,7 @@ def proxy_bytes(synth_symbol):
     proxies = {
         b"sETH": b"ProxysETH",
         b"sBTC": b"ProxysBTC",
-        b"sEUR": b"",  # not deployed
+        b"sEUR": b"ProxysEUR",
         b"sLINK": b"ProxysLINK",
     }
     bytes_contract = encode_single("bytes32", proxies[synth_symbol])
@@ -185,7 +185,7 @@ def yvault(interface, synth_symbol, request):
     yvaults = {
         b"sETH": "0x986b4AFF588a109c09B50A03f42E4110E29D353F",
         b"sBTC": "0x8414Db07a7F743dEbaFb402070AB01a4E0d2E45e",
-        b"sEUR": "",  # not deployed
+        b"sEUR": "0x25212Df29073FfFA7A67399AcEfC2dd75a831A1A",
         b"sLINK": "0xf2db9a7c0ACd427A680D640F02d90f6186E71725",
     }
     yield interface.IVaultV2(yvaults[synth_symbol])
@@ -207,7 +207,7 @@ def crv_whale(synth_symbol):
     whales = {
         b"sETH": "0x3c0ffff15ea30c35d7a85b85c0782d6c94e1d238",
         b"sBTC": "0x13c1542a468319688b89e323fe9a3be3a90ebb27",  # synthetix curve pool
-        b"sEUR": "0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde",  # ytreasury
+        b"sEUR": "0x90bb609649e0451e5ad952683d64bd2d1f245840",
         b"sLINK": "0xfd4d8a17df4c27c1dd245d153ccf4499e806c87d",
     }
     yield (whales[synth_symbol])
@@ -260,7 +260,7 @@ def cloned_strategy(
     pool_sizes = {
         b"sETH": 2,
         b"sBTC": 3,
-        b"sEUR": "",
+        b"sEUR": 2,
         b"sLINK": 2,
     }
 

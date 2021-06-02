@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.6.12;
-pragma experimental ;
+pragma experimental ABIEncoderV2;
 
 import "./Interfaces/curve/Curve.sol";
 import "./Interfaces/curve/ICrvV3.sol";
