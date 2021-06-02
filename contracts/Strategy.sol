@@ -465,6 +465,7 @@ contract Strategy is BaseStrategy, Synthetix {
 
             // 3. Deposit LP tokens in yVault
             uint256 lpBalance = curveToken.balanceOf(address(this));
+
             if(lpBalance > 0){
                 ensureAllowance(address(yvToken), address(curveToken), lpBalance);
                 yvToken.deposit();

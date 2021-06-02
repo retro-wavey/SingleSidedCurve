@@ -95,7 +95,6 @@ def test_buffer(
     cloned_strategy.updateSUSDBuffer(0, {"from": gov})
     print("100% -> 0%")
 
-    prevYVault = yvault.balanceOf(cloned_strategy)
     # two harvests required to 1) exchange for sETH 2) deposit in curve's pool
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins
@@ -119,3 +118,4 @@ def test_buffer(
     assert susd.balanceOf(cloned_strategy) * 10 == pytest.approx(
         vault.strategies(cloned_strategy).dict()["totalDebt"]
     )
+    assert vault.strategies(cloned_strategy).dict()['totalLoss'] < vault.strategies(cloned_strategy).dict()["totalDebt"]*0.02 # which will come from big exchanges with no profits

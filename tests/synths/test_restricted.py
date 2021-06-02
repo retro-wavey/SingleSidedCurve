@@ -3,7 +3,6 @@ from brownie import config, Contract, Wei, chain, reverts
 
 
 def test_restricted(susd_whale, strategy, live_susd_vault):
-
     rando = susd_whale
     gov = live_susd_vault.governance()
     with reverts():
