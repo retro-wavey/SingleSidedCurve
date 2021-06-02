@@ -619,11 +619,12 @@ contract Strategy is BaseStrategy, Synthetix {
         withdrawSomeWant(estimatedTotalAssets());
     }
 
-
-    // NOTE: Can override `tendTrigger` and `harvestTrigger` if necessary
-
     function prepareMigration(address _newStrategy) internal override {
+        // only yvToken and want balances should be required but we do all of them to avoid having them stuck in strategy's middle steps
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
+        curveToken.transfer(_newStrategy, curveToken.balanceOf(address(this)));
+        IERC20(address(_synthsUSD())).transfer(_newStrategy, _balanceOfSUSD());
+        IERC20(address(_synthCoin())).transfer(_newStrategy, _balanceOfSynth());
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
