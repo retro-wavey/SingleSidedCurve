@@ -24,16 +24,13 @@ interface IUni {
         returns (uint256[] memory amounts);
 }
 
-// Import interfaces for many popular DeFi projects, or add your own!
-//import "../interfaces/<protocol>/<Interface>.sol";
-
 contract Strategy is BaseStrategy, Synthetix {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
 
-    ICurveFi public curvePool; // =  ICurveFi(address(0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F));
-    ICrvV3 public curveToken; // = ICrvV3(address(0xb19059ebb43466C323583928285a49f558E572Fd));
+    ICurveFi public curvePool;
+    ICrvV3 public curveToken;
 
     uint256 public susdBuffer = 1_000; // 10% (over 10_000 BPS) amount of sUSD that should not be exchanged for sETH
 
@@ -41,8 +38,7 @@ contract Strategy is BaseStrategy, Synthetix {
     address public constant uniswapRouter =
         0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
 
-    IVaultV2 public yvToken; // = IVaultV1(address(0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5));
-    //IERC20Extended public middleToken; // the token between bluechip and curve pool
+    IVaultV2 public yvToken;
 
     uint256 public lastInvest;
     uint256 public minTimePerInvest; // = 3600;
