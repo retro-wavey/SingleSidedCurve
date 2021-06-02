@@ -3,7 +3,7 @@ from brownie import config, Contract, Wei, chain, reverts
 
 
 def test_buffer(
-    vault, susd, susd_whale, yvault, curvePool, synth, cloned_strategy, gov
+    vault, susd, susd_whale, yvault, curveToken, curvePool, crv_whale, synth, cloned_strategy, gov
 ):
     print("yVault", yvault)
     print("CurvePool", curvePool)
@@ -29,10 +29,8 @@ def test_buffer(
     chain.mine(1)
 
     # simulate profit to avoid losses in accounting
-    eCRV_whale = "0x3c0ffff15ea30c35d7a85b85c0782d6c94e1d238"
-    eCRV = Contract("0xa3d87fffce63b53e0d54faa1cc983b7eb0b74a9c")
     print("Prev eCRV PSS", yvault.pricePerShare())
-    eCRV.transfer(yvault, Wei("10 ether"), {"from": eCRV_whale})
+    curveToken.transfer(yvault, Wei("10 ether"), {"from": crv_whale})
     print("Post eCRV PSS", yvault.pricePerShare())
 
     # harvest to invest and go to steady state
