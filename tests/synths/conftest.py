@@ -139,6 +139,7 @@ def resolver():
 def susd(resolver):
     yield Contract(resolver.getAddress(encode_single("bytes32", b"ProxyERC20sUSD")))
 
+
 @pytest.fixture(scope="function", autouse=True)
 def clean(chain):
     print("Taking snapshot...")
@@ -146,6 +147,7 @@ def clean(chain):
     yield
     print("Reverting to initial state...")
     chain.revert()
+
 
 @pytest.fixture(
     params=[

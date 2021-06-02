@@ -3,7 +3,16 @@ from brownie import config, Contract, Wei, chain, reverts
 
 
 def test_buffer(
-    vault, susd, susd_whale, yvault, curveToken, curvePool, crv_whale, synth, cloned_strategy, gov
+    vault,
+    susd,
+    susd_whale,
+    yvault,
+    curveToken,
+    curvePool,
+    crv_whale,
+    synth,
+    cloned_strategy,
+    gov,
 ):
     print("yVault", yvault)
     print("CurvePool", curvePool)
@@ -118,4 +127,7 @@ def test_buffer(
     assert susd.balanceOf(cloned_strategy) * 10 == pytest.approx(
         vault.strategies(cloned_strategy).dict()["totalDebt"]
     )
-    assert vault.strategies(cloned_strategy).dict()['totalLoss'] < vault.strategies(cloned_strategy).dict()["totalDebt"]*0.02 # which will come from big exchanges with no profits
+    assert (
+        vault.strategies(cloned_strategy).dict()["totalLoss"]
+        < vault.strategies(cloned_strategy).dict()["totalDebt"] * 0.02
+    )  # which will come from big exchanges with no profits
