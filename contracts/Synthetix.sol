@@ -20,8 +20,7 @@ contract Synthetix {
     bytes32 public constant sUSD = "sUSD";
     bytes32 public synthCurrencyKey;
 
-    bytes32 internal constant TRACKING_CODE =
-        "YEARN";
+    bytes32 internal constant TRACKING_CODE = "YEARN";
 
     // ========== ADDRESS RESOLVER CONFIGURATION ==========
     bytes32 private constant CONTRACT_SYNTHETIX = "Synthetix";
@@ -36,7 +35,10 @@ contract Synthetix {
     function _initializeSynthetix(bytes32 _synth) internal {
         // sETH / sBTC / sEUR / sLINK
         contractSynth = _synth;
-        synthCurrencyKey = ISynth(IReadProxy(address(resolver().getAddress(_synth))).target()).currencyKey();
+        synthCurrencyKey = ISynth(
+            IReadProxy(address(resolver().getAddress(_synth))).target()
+        )
+            .currencyKey();
     }
 
     function _balanceOfSynth() internal view returns (uint256) {
@@ -52,7 +54,7 @@ contract Synthetix {
         view
         returns (uint256 amountReceived)
     {
-        if(_amountToSend == 0 || _amountToSend == type(uint256).max) {
+        if (_amountToSend == 0 || _amountToSend == type(uint256).max) {
             return _amountToSend;
         }
         (amountReceived, , ) = _exchanger().getAmountsForExchange(
@@ -67,7 +69,7 @@ contract Synthetix {
         view
         returns (uint256 amountReceived)
     {
-        if(_amountToSend == 0 || _amountToSend == type(uint256).max) {
+        if (_amountToSend == 0 || _amountToSend == type(uint256).max) {
             return _amountToSend;
         }
         (amountReceived, , ) = _exchanger().getAmountsForExchange(
@@ -82,7 +84,7 @@ contract Synthetix {
         view
         returns (uint256 amountToSend)
     {
-        if(_amountToReceive == 0 || _amountToReceive == type(uint256).max) {
+        if (_amountToReceive == 0 || _amountToReceive == type(uint256).max) {
             return _amountToReceive;
         }
         // NOTE: the fee of the trade that would be done (sUSD => synth) in this case
@@ -101,7 +103,7 @@ contract Synthetix {
         view
         returns (uint256 amountToSend)
     {
-        if(_amountToReceive == 0 || _amountToReceive == type(uint256).max) {
+        if (_amountToReceive == 0 || _amountToReceive == type(uint256).max) {
             return _amountToReceive;
         }
         // NOTE: the fee of the trade that would be done (synth => sUSD) in this case
