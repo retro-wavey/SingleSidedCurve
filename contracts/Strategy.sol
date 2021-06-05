@@ -32,7 +32,7 @@ contract Strategy is BaseStrategy, Synthetix {
     ICurveFi public curvePool;
     ICrvV3 public curveToken;
 
-    uint256 public susdBuffer = 1_000; // 10% (over 10_000 BPS) amount of sUSD that should not be exchanged for sETH
+    uint256 public susdBuffer; // 10% (over 10_000 BPS) amount of sUSD that should not be exchanged for sETH
 
     address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public constant uniswapRouter =
@@ -50,7 +50,6 @@ contract Strategy is BaseStrategy, Synthetix {
     uint8 private synth_decimals;
 
     uint256 internal constant DUST_THRESHOLD = 10_000;
-    // uint8 private middle_decimals; // TODO: remove
 
     int128 public curveId;
     uint256 public poolSize;
@@ -632,10 +631,10 @@ contract Strategy is BaseStrategy, Synthetix {
         }
     }
 
-    function manualRemoveFullLiquidity() external onlyGovernance {
+    function manualRemoveFullLiquidity() external onlyGovernance returns (uint256 _liquidatedAmount, uint256 _loss) {
         // It will remove max amount of assets and trade sETH for sUSD
         // the Synthetix waiting period will start (and harvest can be called 6 mins later)
-        withdrawSomeWant(estimatedTotalAssets());
+        (_liquidatedAmount, _loss) = withdrawSomeWant(estimatedTotalAssets());
     }
 
     function prepareMigration(address _newStrategy) internal override {
