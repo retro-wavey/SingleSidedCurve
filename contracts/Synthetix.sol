@@ -5,13 +5,13 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./Interfaces/synthetix/ISynth.sol";
-import "./Interfaces/synthetix/IReadProxy.sol";
-import "./Interfaces/synthetix/ISynthetix.sol";
-import "./Interfaces/synthetix/IExchanger.sol";
-import "./Interfaces/synthetix/IVirtualSynth.sol";
-import "./Interfaces/synthetix/IExchangeRates.sol";
-import "./Interfaces/synthetix/IAddressResolver.sol";
+import "./interfaces/synthetix/ISynth.sol";
+import "./interfaces/synthetix/IReadProxy.sol";
+import "./interfaces/synthetix/ISynthetix.sol";
+import "./interfaces/synthetix/IExchanger.sol";
+import "./interfaces/synthetix/IVirtualSynth.sol";
+import "./interfaces/synthetix/IExchangeRates.sol";
+import "./interfaces/synthetix/IAddressResolver.sol";
 
 contract Synthetix {
     using SafeMath for uint256;
