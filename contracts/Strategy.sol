@@ -104,7 +104,10 @@ contract Strategy is BaseStrategy, Synthetix {
         uint256 _poolSize,
         bool _hasUnderlying
     ) internal {
-        require(address(curvePool) == address(curvePool), "Already Initialized");
+        require(
+            address(curvePool) == address(curvePool),
+            "Already Initialized"
+        );
         require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
         require(address(want) == address(_synthsUSD()), "want must be sUSD");
 
@@ -250,7 +253,10 @@ contract Strategy is BaseStrategy, Synthetix {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
-    function updateWithdrawProtection(bool _withdrawProtection) external onlyAuthorized{
+    function updateWithdrawProtection(bool _withdrawProtection)
+        external
+        onlyAuthorized
+    {
         withdrawProtection = _withdrawProtection;
     }
 
@@ -268,8 +274,9 @@ contract Strategy is BaseStrategy, Synthetix {
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
-        uint256 totalCurveTokens =
-            curveTokensInYVault().add(curveToken.balanceOf(address(this)));
+        uint256 totalCurveTokens = curveTokensInYVault().add(
+            curveToken.balanceOf(address(this))
+        );
         // NOTE: want is always sUSD so we directly use _balanceOfSUSD
         // NOTE: _synthToSUSD takes into account future fees in which the strategy will incur for exchanging synth for sUSD
         return
@@ -384,8 +391,10 @@ contract Strategy is BaseStrategy, Synthetix {
         path[0] = weth;
         path[1] = address(want);
 
-        uint256[] memory amounts =
-            IUni(uniswapRouter).getAmountsOut(_amount, path);
+        uint256[] memory amounts = IUni(uniswapRouter).getAmountsOut(
+            _amount,
+            path
+        );
 
         return amounts[amounts.length - 1];
     }
@@ -404,13 +413,16 @@ contract Strategy is BaseStrategy, Synthetix {
         uint256 totalDebt = vault.strategies(address(this)).totalDebt; // in sUSD (want)
         uint256 buffer = totalDebt.mul(susdBuffer).div(DENOMINATOR);
 
-        uint256 _sUSDToInvest =
-            _sUSDBalance > buffer ? _sUSDBalance.sub(buffer) : 0;
+        uint256 _sUSDToInvest = _sUSDBalance > buffer
+            ? _sUSDBalance.sub(buffer)
+            : 0;
         uint256 _sUSDNeeded = _sUSDToInvest == 0 ? buffer.sub(_sUSDBalance) : 0;
-        uint256 _synthToSell =
-            _sUSDNeeded > 0 ? _synthFromSUSD(_sUSDNeeded) : 0; // amount of Synth that we need to sell to refill buffer
-        uint256 _synthToInvest =
-            looseSynth > _synthToSell ? looseSynth.sub(_synthToSell) : 0;
+        uint256 _synthToSell = _sUSDNeeded > 0
+            ? _synthFromSUSD(_sUSDNeeded)
+            : 0; // amount of Synth that we need to sell to refill buffer
+        uint256 _synthToInvest = looseSynth > _synthToSell
+            ? looseSynth.sub(_synthToSell)
+            : 0;
         // how much loose Synth, available to invest, we will have after buying sUSD?
         // if we cannot invest synth (either due to Synthetix waiting period OR because we don't have enough available)
         // we buy synth with sUSD and return (due to Synthetix waiting period we cannot do anything else)
@@ -424,14 +436,14 @@ contract Strategy is BaseStrategy, Synthetix {
         ) {
             // 2. Supply liquidity (single sided) to Curve Pool
             // calculate LP tokens that we will receive
-            uint256 expectedOut =
-                _synthToInvest.mul(1e18).div(virtualPriceToSynth());
+            uint256 expectedOut = _synthToInvest.mul(1e18).div(
+                virtualPriceToSynth()
+            );
 
             // Minimum amount of LP tokens to mint
-            uint256 minMint =
-                expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(
-                    DENOMINATOR
-                );
+            uint256 minMint = expectedOut
+            .mul(DENOMINATOR.sub(slippageProtectionIn))
+            .div(DENOMINATOR);
 
             ensureAllowance(
                 address(curvePool),
@@ -496,8 +508,9 @@ contract Strategy is BaseStrategy, Synthetix {
             // this means that we need to refill the buffer
             // we may have already some uninvested Synth so we use it (and avoid withdrawing from Curve's Pool)
             uint256 available = _synthToSUSD(_balanceOfSynth());
-            uint256 sUSDToWithdraw =
-                _sUSDNeeded > available ? _sUSDNeeded.sub(available) : 0;
+            uint256 sUSDToWithdraw = _sUSDNeeded > available
+                ? _sUSDNeeded.sub(available)
+                : 0;
             // this will withdraw and sell full balance of Synth (inside withdrawSomeWant)
             if (sUSDToWithdraw > 0) {
                 withdrawSomeWant(sUSDToWithdraw);
@@ -546,16 +559,18 @@ contract Strategy is BaseStrategy, Synthetix {
         uint256 virtualPrice = virtualPriceToSynth();
 
         // 1. We calculate how many LP tokens we need to burn to get requested want
-        uint256 amountWeNeedFromVirtualPrice =
-            _synthFromSUSD(_amount).mul(1e18).div(virtualPrice);
+        uint256 amountWeNeedFromVirtualPrice = _synthFromSUSD(_amount)
+        .mul(1e18)
+        .div(virtualPrice);
 
         // 2. Withdraw LP tokens from yVault
         uint256 crvBeforeBalance = curveToken.balanceOf(address(this));
 
         // Calculate how many shares we need to burn to get the amount of LP tokens that we want
         uint256 pricePerFullShare = yvToken.pricePerShare();
-        uint256 amountFromVault =
-            amountWeNeedFromVirtualPrice.mul(1e18).div(pricePerFullShare);
+        uint256 amountFromVault = amountWeNeedFromVirtualPrice.mul(1e18).div(
+            pricePerFullShare
+        );
 
         // cap to our yShares balance
         uint256 yBalance = yvToken.balanceOf(address(this));
@@ -563,8 +578,9 @@ contract Strategy is BaseStrategy, Synthetix {
             amountFromVault = yBalance;
             // this is not loss. so we amend amount
 
-            uint256 _amountOfCrv =
-                amountFromVault.mul(pricePerFullShare).div(1e18);
+            uint256 _amountOfCrv = amountFromVault.mul(pricePerFullShare).div(
+                1e18
+            );
             _amount = _amountOfCrv.mul(virtualPrice).div(1e18);
         }
 
@@ -583,17 +599,17 @@ contract Strategy is BaseStrategy, Synthetix {
 
             // 3. Get coins back by burning LP tokens
             // We are going to burn the amount of LP tokens we just withdrew
-            uint256 toBurn =
-                curveToken.balanceOf(address(this)).sub(crvBeforeBalance);
+            uint256 toBurn = curveToken.balanceOf(address(this)).sub(
+                crvBeforeBalance
+            );
 
             // amount of synth we expect to receive
             uint256 toWithdraw = toBurn.mul(virtualPriceToSynth()).div(1e18);
 
             // minimum amount of coins we are going to receive
-            uint256 minAmount =
-                toWithdraw.mul(DENOMINATOR.sub(slippageProtectionOut)).div(
-                    DENOMINATOR
-                );
+            uint256 minAmount = toWithdraw
+            .mul(DENOMINATOR.sub(slippageProtectionOut))
+            .div(DENOMINATOR);
 
             if (hasUnderlying) {
                 curvePool.remove_liquidity_one_coin(
@@ -621,7 +637,11 @@ contract Strategy is BaseStrategy, Synthetix {
         }
     }
 
-    function manualRemoveFullLiquidity() external onlyGovernance returns (uint256 _liquidatedAmount, uint256 _loss) {
+    function manualRemoveFullLiquidity()
+        external
+        onlyGovernance
+        returns (uint256 _liquidatedAmount, uint256 _loss)
+    {
         // It will remove max amount of assets and trade sETH for sUSD
         // the Synthetix waiting period will start (and harvest can be called 6 mins later)
         (_liquidatedAmount, _loss) = withdrawSomeWant(estimatedTotalAssets());

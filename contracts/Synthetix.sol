@@ -37,8 +37,7 @@ contract Synthetix {
         contractSynth = _synth;
         synthCurrencyKey = ISynth(
             IReadProxy(address(resolver().getAddress(_synth))).target()
-        )
-            .currencyKey();
+        ).currencyKey();
     }
 
     function _balanceOfSynth() internal view returns (uint256) {
@@ -88,8 +87,10 @@ contract Synthetix {
             return _amountToReceive;
         }
         // NOTE: the fee of the trade that would be done (sUSD => synth) in this case
-        uint256 feeRate =
-            _exchanger().feeRateForExchange(sUSD, synthCurrencyKey); // in base 1e18
+        uint256 feeRate = _exchanger().feeRateForExchange(
+            sUSD,
+            synthCurrencyKey
+        ); // in base 1e18
         // formula => amountToReceive (Synth) * price (sUSD/Synth) / (1 - feeRate)
         return
             _exchangeRates()
@@ -107,8 +108,10 @@ contract Synthetix {
             return _amountToReceive;
         }
         // NOTE: the fee of the trade that would be done (synth => sUSD) in this case
-        uint256 feeRate =
-            _exchanger().feeRateForExchange(synthCurrencyKey, sUSD); // in base 1e18
+        uint256 feeRate = _exchanger().feeRateForExchange(
+            synthCurrencyKey,
+            sUSD
+        ); // in base 1e18
         // formula => amountToReceive (sUSD) * price (Synth/sUSD) / (1 - feeRate)
         return
             _exchangeRates()
