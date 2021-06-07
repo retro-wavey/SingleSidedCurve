@@ -20,6 +20,7 @@ interface IVaultV2 is IERC20 {
         address,
         uint256,
         uint256,
+        uint256,
         uint256
     ) external;
 
