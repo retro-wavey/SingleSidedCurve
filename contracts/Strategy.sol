@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./Interfaces/curve/Curve.sol";
 import "./Interfaces/curve/ICrvV3.sol";
 import "./Interfaces/erc20/IERC20Extended.sol";
-import "./Interfaces/yearn/IVaultV2.sol";
+import "./Interfaces/Yearn/IVaultV2.sol";
 
 import "./Synthetix.sol";
 
