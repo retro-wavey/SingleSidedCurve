@@ -85,7 +85,10 @@ def test_revoke_with_profit(
 
     curveToken.transfer(yvault, Wei("50000 ether"), {"from": crv_whale})
 
-    profit = cloned_strategy.estimatedTotalAssets() - vault.strategies(cloned_strategy).dict()["totalDebt"]
+    profit = (
+        cloned_strategy.estimatedTotalAssets()
+        - vault.strategies(cloned_strategy).dict()["totalDebt"]
+    )
     vault.revokeStrategy(strategy.address, {"from": gov})
 
     strategy.manualRemoveFullLiquidity({"from": gov})
