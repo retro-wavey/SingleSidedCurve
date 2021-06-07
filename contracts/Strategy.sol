@@ -250,6 +250,10 @@ contract Strategy is BaseStrategy, Synthetix {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
+    function updateWithdrawProtection(bool _withdrawProtection) external onlyAuthorized{
+        withdrawProtection = _withdrawProtection;
+    }
+
     function updateMaxLoss(uint256 _maxLoss) public onlyAuthorized {
         require(_maxLoss <= 10_000);
         maxLoss = _maxLoss;
@@ -639,9 +643,9 @@ contract Strategy is BaseStrategy, Synthetix {
 
     function prepareMigration(address _newStrategy) internal override {
         // only yvToken and want balances should be required but we do all of them to avoid having them stuck in strategy's middle steps
+        // want balance is sent from BaseStrategy's migrate method
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
         curveToken.transfer(_newStrategy, curveToken.balanceOf(address(this)));
-        IERC20(address(_synthsUSD())).transfer(_newStrategy, _balanceOfSUSD());
         IERC20(address(_synthCoin())).transfer(_newStrategy, _balanceOfSynth());
     }
 
