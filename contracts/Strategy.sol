@@ -2,10 +2,10 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./interfaces/curve/Curve.sol";
-import "./interfaces/curve/ICrvV3.sol";
-import "./interfaces/erc20/IERC20Extended.sol";
-import "./interfaces/yearn/IVaultV2.sol";
+import "./Interfaces/curve/Curve.sol";
+import "./Interfaces/curve/ICrvV3.sol";
+import "./Interfaces/erc20/IERC20Extended.sol";
+import "./Interfaces/yearn/IVaultV2.sol";
 
 import "./Synthetix.sol";
 
