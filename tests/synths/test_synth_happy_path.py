@@ -60,6 +60,8 @@ def test_synth_happy_path(
     amount = curveToken.balanceOf(crv_whale) / 4
     if synth.symbol() == "sETH":
         amount = Wei("50000 ether")
+    elif synth.symbol() == "sEUR":
+        amount = Wei("5000 ether")
 
     curveToken.transfer(yvault, amount, {"from": crv_whale})
     print("Post eCRV PSS", yvault.pricePerShare())
