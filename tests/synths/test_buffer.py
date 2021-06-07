@@ -60,7 +60,7 @@ def test_buffer(
     # up to 25% buffer (from 10%)
     print("10% -> 25%")
     cloned_strategy.updateSUSDBuffer(2_500, {"from": gov})
-    vault.deposit(Wei("10000 ether"), {"from": susd_whale})
+    vault.deposit(Wei("1000 ether"), {"from": susd_whale})
 
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins

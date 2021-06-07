@@ -104,7 +104,7 @@ contract Strategy is BaseStrategy, Synthetix {
         uint256 _poolSize,
         bool _hasUnderlying
     ) internal {
-        require(synth_decimals == 0, "Already Initialized");
+        require(address(curvePool) == address(curvePool), "Already Initialized");
         require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
         require(address(want) == address(_synthsUSD()), "want must be sUSD");
 
@@ -293,14 +293,7 @@ contract Strategy is BaseStrategy, Synthetix {
 
     //we lose some precision here. but it shouldnt matter as we are underestimating
     function virtualPriceToSynth() public view returns (uint256) {
-        if (synth_decimals < 18) {
-            return
-                curvePool.get_virtual_price().div(
-                    10**(uint256(uint8(18) - synth_decimals))
-                );
-        } else {
-            return curvePool.get_virtual_price();
-        }
+        return curvePool.get_virtual_price();
     }
 
     function curveTokensInYVault() public view returns (uint256) {
@@ -601,13 +594,6 @@ contract Strategy is BaseStrategy, Synthetix {
                 toWithdraw.mul(DENOMINATOR.sub(slippageProtectionOut)).div(
                     DENOMINATOR
                 );
-
-            //if we have less than 18 decimals we need to lower the amount out
-            if (synth_decimals < 18) {
-                minAmount = minAmount.div(
-                    10**(uint256(uint8(18) - synth_decimals))
-                );
-            }
 
             if (hasUnderlying) {
                 curvePool.remove_liquidity_one_coin(

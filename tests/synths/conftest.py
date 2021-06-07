@@ -276,6 +276,6 @@ def cloned_strategy(
         {"from": strategist},
     ).return_value
     cloned_strategy = Contract.from_abi("Strategy", cloned_strategy, strategy.abi)
-    cloned_strategy.updateSlippageProtectionOut(100, {"from": gov})
+    cloned_strategy.updateSlippageProtectionOut(150, {"from": gov})
     vault.addStrategy(cloned_strategy, 10_000, 0, 2 ** 256 - 1, 0, {"from": gov})
     yield cloned_strategy
