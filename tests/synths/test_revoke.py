@@ -91,4 +91,4 @@ def test_revoke_with_profit(
     chain.sleep(6 * 60 + 1)
     chain.mine()
     strategy.harvest({"from": gov})
-    assert token.balanceOf(vault.address) > amount
+    assert pytest.approx(token.balanceOf(vault.address), rel=1e-2) == amount * 0.995

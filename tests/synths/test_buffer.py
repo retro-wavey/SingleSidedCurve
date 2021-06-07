@@ -39,6 +39,8 @@ def test_buffer(
 
     # simulate profit to avoid losses in accounting
     print("Prev eCRV PSS", yvault.pricePerShare())
+    # if synth.symbol() == "sEUR":
+    #     curveToken.transfer(yvault, Wei("1000 ether"), {"from": crv_whale})
     curveToken.transfer(yvault, Wei("10 ether"), {"from": crv_whale})
     print("Post eCRV PSS", yvault.pricePerShare())
 
@@ -60,8 +62,11 @@ def test_buffer(
     # up to 25% buffer (from 10%)
     print("10% -> 25%")
     cloned_strategy.updateSUSDBuffer(2_500, {"from": gov})
-    vault.deposit(Wei("1000 ether"), {"from": susd_whale})
-
+    # vault.deposit(Wei("10000 ether"), {"from": susd_whale})
+    if synth.symbol == "sEUR":
+        vault.deposit(Wei("1000 ether"), {"from": susd_whale})
+    else:  # sETH sLINK
+        vault.deposit(Wei("10000 ether"), {"from": susd_whale})
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
@@ -93,7 +98,10 @@ def test_buffer(
 
     # new deposits should directly increase susd balance, not yvault balance
     # strategy will uninvest the full balance to be able to honor the sUSD buffer
-    vault.deposit(Wei("50000 ether"), {"from": susd_whale})
+    if synth.symbol == "sEUR":
+        vault.deposit(Wei("500 ether"), {"from": susd_whale})
+    else:  # sETH sLINK
+        vault.deposit(Wei("50000 ether"), {"from": susd_whale})
     prevBalance = susd.balanceOf(cloned_strategy)
     tx = cloned_strategy.harvest({"from": gov})
     chain.sleep(360 + 1)  # over 6 mins
@@ -109,10 +117,15 @@ def test_buffer(
     chain.sleep(360 + 1)  # over 6 mins
     chain.mine(1)
     # should revert as it does not have enough to serve profits / other repaymetns
-    with reverts():
-        tx = cloned_strategy.harvest({"from": gov})
-        chain.sleep(360 + 1)  # over 6 mins
-        chain.mine(1)
+    if (
+        cloned_strategy.estimatedTotalAssets()
+        - vault.strategies(cloned_strategy).dict()["totalDebt"]
+        > 0
+    ):
+        with reverts():
+            tx = cloned_strategy.harvest({"from": gov})
+            chain.sleep(360 + 1)  # over 6 mins
+            chain.mine(1)
 
     # if buffer gets to 0, the strategy might get stuck! we need manual liquidation
     cloned_strategy.manualRemoveFullLiquidity({"from": gov})

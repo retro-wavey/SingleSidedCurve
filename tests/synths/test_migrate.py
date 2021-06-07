@@ -55,7 +55,7 @@ def test_migrate(
     ).return_value
 
     cloned_strategy_2 = Contract.from_abi("Strategy", cloned_strategy_2, strategy.abi)
-    cloned_strategy_2.updateSlippageProtectionOut(100, {"from": gov})
+    cloned_strategy_2.updateSlippageProtectionOut(150, {"from": gov})
 
     assetsPrev = cloned_strategy.estimatedTotalAssets()
     yvTokenPrev = yvault.balanceOf(cloned_strategy)
