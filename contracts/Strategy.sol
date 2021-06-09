@@ -31,6 +31,7 @@ contract Strategy is BaseStrategy {
     using SafeMath for uint256;
 
     ICurveFi public curvePool;// =  ICurveFi(address(0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F));
+    ICurveFi public basePool;
     ICrvV3 public curveToken;// = ICrvV3(address(0xb19059ebb43466C323583928285a49f558E572Fd));
 
     address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -64,16 +65,15 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
+        bool _isBase,
         bool _hasUnderlying
     ) public BaseStrategy(_vault) {
-         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _isBase, _hasUnderlying);
     }
 
     function initialize(
         address _vault,
         address _strategist,
-        address _rewards,
-        address _keeper,
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
@@ -81,11 +81,12 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
+        bool _isBase,
         bool _hasUnderlying
     ) external {
         //note: initialise can only be called once. in _initialize in BaseStrategy we have: require(address(want) == address(0), "Strategy already initialized");
-        _initialize(_vault, _strategist, _rewards, _keeper);
-        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+        _initialize(_vault, _strategist, _strategist, _strategist);
+        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _isBase, _hasUnderlying);
     }
 
     function _initializeStrat(
@@ -96,25 +97,53 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
+        bool _isBase,
         bool _hasUnderlying
     ) internal {
         require(want_decimals == 0, "Already Initialized");
         require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
         
+        
         curvePool = ICurveFi(_curvePool);
 
-        if(curvePool.coins(0) == address(want) || (_hasUnderlying && curvePool.underlying_coins(0) == address(want) )){
-            curveId =0;
-        }else if ( curvePool.coins(1) == address(want) || (_hasUnderlying && curvePool.underlying_coins(1) == address(want) )){
-            curveId =1;
-        }else if ( curvePool.coins(2) == address(want) || (_hasUnderlying && curvePool.underlying_coins(2) == address(want) )){
-            curveId =2;
-        }else if ( curvePool.coins(3) == address(want) || (_hasUnderlying && curvePool.underlying_coins(3) == address(want) )){
-            //will revert if there are not enough coins
-           curveId =3;
+        if(_isBase){
+            basePool = ICurveFi(curvePool.pool());
+            
+            for(uint i = 0; i < _poolSize; i++){
+                if( i == 0){
+                    if(curvePool.coins(0) == address(want)){
+                        curveId =0;
+                        break;
+                    }
+                }else{
+                    if(curvePool.base_coins(i-1) == address(want)){
+                        curveId = int128(i);
+                        break;
+                    }
+                }
+                if(i == _poolSize - 1){ // doesnt matter if it overflows
+                    require(false, "incorrect want for curve pool");
+                }
+            }
+
         }else{
-            require(false, "incorrect want for curve pool");
+            basePool = ICurveFi(_curvePool);
+            if(curvePool.coins(0) == address(want) || (_hasUnderlying && curvePool.underlying_coins(0) == address(want) )){
+                curveId =0;
+            }else if ( curvePool.coins(1) == address(want) || (_hasUnderlying && curvePool.underlying_coins(1) == address(want) )){
+                curveId =1;
+            }else if ( curvePool.coins(2) == address(want) || (_hasUnderlying && curvePool.underlying_coins(2) == address(want) )){
+                curveId =2;
+            }else if ( curvePool.coins(3) == address(want) || (_hasUnderlying && curvePool.underlying_coins(3) == address(want) )){
+                //will revert if there are not enough coins
+            curveId =3;
+            }else{
+                require(false, "incorrect want for curve pool");
+            }
+
         }
+        
+        
 
         /*if(_hasUnderlying){
             middleToken = IERC20Extended(curvePool.coins(uint256(curveId)));
@@ -151,8 +180,6 @@ contract Strategy is BaseStrategy {
     function cloneSingleSidedCurve(
         address _vault,
         address _strategist,
-        address _rewards,
-        address _keeper,
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
@@ -160,6 +187,7 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
+        bool _isBase,
         bool _hasUnderlying
     ) external returns (address newStrategy){
          bytes20 addressBytes = bytes20(address(this));
@@ -173,7 +201,7 @@ contract Strategy is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _rewards, _keeper, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _hasUnderlying);
+        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _isBase, _hasUnderlying);
 
         emit Cloned(newStrategy);
 
@@ -211,29 +239,18 @@ contract Strategy is BaseStrategy {
         if(tokens == 0){
             return 0;
         }
-
-        //we want to choose lower value of virtual price and amount we really get out
-        //this means we will always underestimate current assets. 
+    
         uint256 virtualOut = virtualPriceToWant().mul(tokens).div(1e18);
 
-        /*uint256 realOut;
-        if(hasUnderlying){
-            realOut = curvePool.calc_withdraw_one_coin(tokens, curveId, true);
-        }else{
-            realOut = curvePool.calc_withdraw_one_coin(tokens, curveId);
-        }*/
-        
-
-        //return Math.min(virtualOut, realOut);
         return virtualOut;
     }
 
     //we lose some precision here. but it shouldnt matter as we are underestimating
     function virtualPriceToWant() public view returns (uint256) {
         if(want_decimals < 18){
-            return curvePool.get_virtual_price().div(10 ** (uint256(uint8(18) - want_decimals)));
+            return basePool.get_virtual_price().div(10 ** (uint256(uint8(18) - want_decimals)));
         }else{
-            return curvePool.get_virtual_price();
+            return basePool.get_virtual_price();
         }
 
     }
@@ -310,19 +327,12 @@ contract Strategy is BaseStrategy {
         
     }
 
-    function harvestTrigger(uint256 callCost) public view override returns (bool) {
-        uint256 wantCallCost;
-        
-        if (address(want) == weth) {
-            wantCallCost = callCost;
-        } else  {
-            wantCallCost = _ethToWant(callCost);
-        } 
+    function liquidateAllPositions() internal override returns (uint256 _amountFreed) {
 
-        return super.harvestTrigger(wantCallCost);
+        (_amountFreed, ) = liquidatePosition(1e36); //we can request a lot. dont use max because of overflow
     }
 
-    function _ethToWant(uint256 _amount) internal view returns (uint256) {
+    function ethToWant(uint256 _amount) public override view returns (uint256) {
         address[] memory path = new address[](2);
         path[0] = weth;
         path[1] = address(want);
