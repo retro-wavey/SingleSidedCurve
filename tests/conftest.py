@@ -90,6 +90,10 @@ def ibyvault(Vault):
     yield Vault.at('0x27b7b1ad7288079A66d12350c828D3C00A6F07d7')
 
 @pytest.fixture
+def usdnyvault(Vault):
+    yield Vault.at('0x3B96d491f067912D18563d56858Ba7d6EC67a6fa')
+
+@pytest.fixture
 def yhbtcstrategy(interface):
     yield interface.IStratV1('0xE02363cB1e4E1B77a74fAf38F3Dbb7d0B70F26D7')
 
@@ -106,6 +110,10 @@ def live_wbtc_vault(pm):
 @pytest.fixture
 def obCRV(interface):
     yield interface.ICrvV3('0x2fE94ea3d5d4a175184081439753DE15AeF9d614')
+
+@pytest.fixture
+def usdn3crv(interface):
+    yield interface.ICrvV3('0x4f3E8F405CF5aFC05D68142F3783bDfE13811522')
 @pytest.fixture
 def hCRV(interface):
     yield interface.ICrvV3('0xb19059ebb43466C323583928285a49f558E572Fd')
@@ -113,8 +121,13 @@ def hCRV(interface):
 def curvePool(interface):
     yield interface.ICurveFi('0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F')
 @pytest.fixture
+def depositUsdn(interface):
+    yield interface.ICurveFi('0x094d12e5b541784701FD8d65F11fc0598FBC6332')
+
+@pytest.fixture
 def curvePoolObtc(interface):
     yield interface.ICurveFi('0xd81dA8D904b52208541Bade1bD6595D8a251F8dd')
+
 @pytest.fixture
 def ibCurvePool(interface):
     yield interface.ICurveFi('0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF')
@@ -200,6 +213,15 @@ def wbtc_vault(pm, gov, rewards, guardian, wbtc):
 
 
 @pytest.fixture
+def dai_vault(pm, gov, rewards, guardian, dai):
+    currency = dai
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian)
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
+@pytest.fixture
 def strategist(accounts):
     # You! Our new Strategist!
     yield accounts[3]
@@ -251,6 +273,12 @@ def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy
 @pytest.fixture
 def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault):
     strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
+    strategy.setKeeper(keeper)
+    yield strategy
+
+@pytest.fixture
+def strategy_dai_usdn(strategist, keeper, dai_vault, Strategy, depositUsdn, usdn3crv, usdnyvault):
+    strategy = strategist.deploy(Strategy, dai_vault, 1_000_000*1e18, 3600, 500, depositUsdn, usdn3crv, usdnyvault,4, True, False)
     strategy.setKeeper(keeper)
     yield strategy
 
