@@ -1,5 +1,6 @@
 import pytest
 from brownie import config
+from brownie import network
 
 @pytest.fixture
 def andre(accounts):
@@ -43,6 +44,8 @@ def usdt(interface):
 
 @pytest.fixture
 def whale(accounts, web3, currency, chain, wbtc, dai):
+    network.gas_price("0 gwei")
+    network.gas_limit(6700000)
 
     daiAcc = accounts.at("0xb0Fa2BeEe3Cf36a7Ac7E99B885b48538Ab364853", force=True)
 
@@ -217,7 +220,7 @@ def dai_vault(pm, gov, rewards, guardian, dai):
     currency = dai
     Vault = pm(config["dependencies"][0]).Vault
     vault = gov.deploy(Vault)
-    vault.initialize(currency, gov, rewards, "", "", guardian)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
@@ -278,8 +281,8 @@ def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, i
 
 @pytest.fixture
 def strategy_dai_usdn(strategist, keeper, dai_vault, Strategy, depositUsdn, usdn3crv, usdnyvault):
-    strategy = strategist.deploy(Strategy, dai_vault, 1_000_000*1e18, 3600, 500, depositUsdn, usdn3crv, usdnyvault,4, True, False)
-    strategy.setKeeper(keeper)
+    strategy = strategist.deploy(Strategy, dai_vault, 1_000_000*1e18, 3600, 5000, depositUsdn, usdn3crv, usdnyvault,4, True, False)
+    #strategy.setKeeper(keeper)
     yield strategy
 
 @pytest.fixture

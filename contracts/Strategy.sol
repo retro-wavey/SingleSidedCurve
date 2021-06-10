@@ -53,6 +53,7 @@ contract Strategy is BaseStrategy {
     int128 public curveId;
     uint256 public poolSize;
     bool public hasUnderlying;
+    bool public metaPool;
 
     bool public withdrawProtection;
 
@@ -65,10 +66,10 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _isBase,
+        bool _metaPool,
         bool _hasUnderlying
     ) public BaseStrategy(_vault) {
-         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _isBase, _hasUnderlying);
+         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaPool, _hasUnderlying);
     }
 
     function initialize(
@@ -81,12 +82,12 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _isBase,
+        bool _metaPool,
         bool _hasUnderlying
     ) external {
         //note: initialise can only be called once. in _initialize in BaseStrategy we have: require(address(want) == address(0), "Strategy already initialized");
         _initialize(_vault, _strategist, _strategist, _strategist);
-        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _isBase, _hasUnderlying);
+        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaPool, _hasUnderlying);
     }
 
     function _initializeStrat(
@@ -97,7 +98,7 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _isBase,
+        bool _metaPool,
         bool _hasUnderlying
     ) internal {
         require(want_decimals == 0, "Already Initialized");
@@ -106,14 +107,14 @@ contract Strategy is BaseStrategy {
         
         curvePool = ICurveFi(_curvePool);
 
-        if(_isBase){
+        if(_metaPool){
             basePool = ICurveFi(curvePool.pool());
+            metaPool = true;
             
             for(uint i = 0; i < _poolSize; i++){
                 if( i == 0){
                     if(curvePool.coins(0) == address(want)){
-                        curveId =0;
-                        break;
+                        require(false, "ONLY USE META FOR 3CRV");
                     }
                 }else{
                     if(curvePool.base_coins(i-1) == address(want)){
@@ -173,6 +174,12 @@ contract Strategy is BaseStrategy {
         want_decimals = IERC20Extended(address(want)).decimals();
 
         want.safeApprove(address(curvePool), uint256(-1));
+
+        //deposit contract needs permissions
+        if(metaPool){
+            IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490).safeApprove(address(curvePool), uint256(-1)); // 3crv    
+            curveToken.approve(address(curvePool), uint256(-1));
+        }
         curveToken.approve(address(yvToken), uint256(-1));
     }
 
@@ -187,7 +194,7 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _isBase,
+        bool _metaPool,
         bool _hasUnderlying
     ) external returns (address newStrategy){
          bytes20 addressBytes = bytes20(address(this));
@@ -201,7 +208,7 @@ contract Strategy is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _isBase, _hasUnderlying);
+        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaPool, _hasUnderlying);
 
         emit Cloned(newStrategy);
 
@@ -247,10 +254,17 @@ contract Strategy is BaseStrategy {
 
     //we lose some precision here. but it shouldnt matter as we are underestimating
     function virtualPriceToWant() public view returns (uint256) {
+
+        uint256 virtualPrice = basePool.get_virtual_price();
+        /*if(metaPool){
+            //warning: base virtual price is not cached and not live
+            virtualPrice = virtualPrice.mul(basePool.base_virtual_price()).div(1e18);
+        }*/
+
         if(want_decimals < 18){
-            return basePool.get_virtual_price().div(10 ** (uint256(uint8(18) - want_decimals)));
+            return virtualPrice.div(10 ** (uint256(uint8(18) - want_decimals)));
         }else{
-            return basePool.get_virtual_price();
+            return virtualPrice;
         }
 
     }

@@ -49,17 +49,17 @@ def test_dai_usdn(dai,stratms, whale,Strategy, strategy_dai_usdn, accounts, usdn
     ibcrvStrat1.harvest({"from": vGov})
     ibcrvStrat2.harvest({"from": vGov})
     chain.sleep(2016000)
-    chain.mine(1)
+    #chain.mine(1)
     ibcrvStrat1.harvest({"from": vGov})
     ibcrvStrat2.harvest({"from": vGov})
     chain.sleep(21600)
-    chain.mine(1)
+    #chain.mine(1)
     strategy.harvest({'from': strategist})
     print(vault.strategies(strategy))
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
     chain.sleep(21600)
-    chain.mine(1)
+    #chain.mine(1)
  
     vault.withdraw({"from": whale})
     whale_after = currency.balanceOf(whale)
@@ -67,8 +67,11 @@ def test_dai_usdn(dai,stratms, whale,Strategy, strategy_dai_usdn, accounts, usdn
     print("balance left =", vault.balanceOf(whale))
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
-    chain.sleep(21600)
-    chain.mine(1)
+    vault.updateStrategyDebtRatio(strategy, 0 , {"from": gov})
+    #chain.mine(1)
 
     strategy.harvest({'from': strategist})
     genericStateOfStrat(strategy, currency, vault)
+
+    
+

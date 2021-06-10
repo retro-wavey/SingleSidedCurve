@@ -4,6 +4,7 @@ pragma solidity 0.6.12;
 
 interface ICurveFi {
     function get_virtual_price() external view returns (uint256);
+    function base_virtual_price() external view returns (uint256);
 
     function add_liquidity(
         // sBTC pool
