@@ -151,6 +151,9 @@ def zeroaddress():
 def sbtccrv(interface):
     yield interface.ICrvV3('0x075b1bb99792c9E1041bA13afEf80C91a1e70fB3')
     
+@pytest.fixture
+def healthcheck(Contract):
+    yield Contract('0xDDCea799fF1699e98EDF118e0629A974Df7DF012')
 
 @pytest.fixture
 def usdn3crv(interface):
@@ -312,8 +315,9 @@ def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy
     
 
 @pytest.fixture
-def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault):
+def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault,healthcheck):
     strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
+    strategy.setHealthCheck(healthcheck)
     strategy.setKeeper(keeper)
     yield strategy
 
@@ -330,14 +334,15 @@ def strategy_wbtc_hbtc(strategist, keeper, live_wbtc_vault, Strategy, curvePool,
     yield strategy
 
 @pytest.fixture
-def strategy_wbtc_obtc(strategist, keeper, wbtc_vault, Strategy, curvePoolObtc, obCRV, sbtccrv, yvaultv2Obtc):
-    strategy = strategist.deploy(Strategy, wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, sbtccrv, False)
+def strategy_wbtc_obtc(gov, keeper, wbtc_vault,healthcheck, Strategy, curvePoolObtc, obCRV, sbtccrv, yvaultv2Obtc):
+    strategy = gov.deploy(Strategy, wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, sbtccrv, False)
+    strategy.setHealthCheck(healthcheck)
     strategy.setKeeper(keeper)
     yield strategy
 
 @pytest.fixture
-def strategy_hbtc_hbtc(strategist, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
-    strategy = strategist.deploy(Strategy, hbtc_vault, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
+def strategy_hbtc_hbtc(gov, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
+    strategy = gov.deploy(Strategy, hbtc_vault, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
     
     yield strategy
 
