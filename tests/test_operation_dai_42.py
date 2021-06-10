@@ -68,6 +68,7 @@ def test_dai_usdn(dai,stratms, whale,Strategy, strategy_dai_usdn, accounts, usdn
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
     vault.updateStrategyDebtRatio(strategy, 0 , {"from": gov})
+    strategy.setProfitLimitRatio(10000, {"from": gov})
     #chain.mine(1)
 
     strategy.harvest({'from': strategist})

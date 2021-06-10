@@ -45,7 +45,12 @@ contract Strategy is BaseStrategy {
     uint256 public maxSingleInvest;// // 2 hbtc per hour default
     uint256 public slippageProtectionIn;// = 50; //out of 10000. 50 = 0.5%
     uint256 public slippageProtectionOut;// = 50; //out of 10000. 50 = 0.5%
-    uint256 public constant DENOMINATOR = 10000;
+    uint256 public constant DENOMINATOR = 10_000;
+
+
+    uint256 public lossLimitRatio; //healthcheck
+    uint256 public profitLimitRatio; 
+    bool public doHealthCheck;
 
     uint8 private want_decimals;
     uint8 private middle_decimals;
@@ -171,6 +176,9 @@ contract Strategy is BaseStrategy {
         minReportDelay = 3600;
         debtThreshold = 100*1e18;
         withdrawProtection = true;
+        doHealthCheck = true;
+        lossLimitRatio = 1; //a small amount of loss is allowed (0.01%)
+        profitLimitRatio = 100; // 1% profit is probably a mistake. start loss at 0%
         want_decimals = IERC20Extended(address(want)).decimals();
 
         want.safeApprove(address(curvePool), uint256(-1));
@@ -232,6 +240,19 @@ contract Strategy is BaseStrategy {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
+     function setProfitLimitRatio(uint256 _profitLimitRatio) external onlyAuthorized {
+        require(_profitLimitRatio <= DENOMINATOR);
+        profitLimitRatio = _profitLimitRatio;
+    }
+
+    function setlossLimitRatio(uint256 _lossLimitRatio) external onlyAuthorized {
+        require(_lossLimitRatio <= DENOMINATOR);
+        lossLimitRatio = _lossLimitRatio;
+    }
+
+    function setDoHealthCheck(bool _doHealthCheck) external onlyAuthorized {
+        doHealthCheck = _doHealthCheck;
+    }
 
     function delegatedAssets() public override view returns (uint256) {
         return vault.strategies(address(this)).totalDebt;
@@ -338,6 +359,15 @@ contract Strategy is BaseStrategy {
             }else if (wantBalance < _debtPayment.add(_profit)){
                 _debtPayment = wantBalance.sub(_profit);
             }
+        }
+
+        if(doHealthCheck && debt > 0){
+            //set to 10_000 to let any profit through
+            if(profitLimitRatio < DENOMINATOR){
+                require(_profit < debt.mul(profitLimitRatio).div(DENOMINATOR), "PROFIT TOO HIGH");
+            }
+            require(_loss < debt.mul(lossLimitRatio).div(DENOMINATOR), "LOSS TOO HIGH");
+
         }
         
     }

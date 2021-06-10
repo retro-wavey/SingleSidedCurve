@@ -68,6 +68,7 @@ def test_wbtc_obtc(wbtc,stratms, whale,Strategy, strategy_wbtc_obtc, accounts, y
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
     vault.updateStrategyDebtRatio(strategy, 0 , {"from": gov})
+    strategy.setProfitLimitRatio(10000, {"from": gov})
     #chain.mine(1)
 
     strategy.harvest({'from': strategist})
