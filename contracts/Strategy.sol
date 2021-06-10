@@ -47,11 +47,6 @@ contract Strategy is BaseStrategy {
     uint256 public slippageProtectionOut;// = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10_000;
 
-
-    /*uint256 public lossLimitRatio; //healthcheck
-    uint256 public profitLimitRatio; 
-    bool public doHealthCheck;*/
-
     uint8 private want_decimals;
     uint8 private middle_decimals;
 
@@ -148,13 +143,6 @@ contract Strategy is BaseStrategy {
             }
 
         }
-        
-        
-
-        /*if(_hasUnderlying){
-            middleToken = IERC20Extended(curvePool.coins(uint256(curveId)));
-            middle_decimals = middleToken.decimals();
-        }*/
 
         maxSingleInvest = _maxSingleInvest;
         minTimePerInvest = _minTimePerInvest;
@@ -176,9 +164,6 @@ contract Strategy is BaseStrategy {
         minReportDelay = 3600;
         debtThreshold = 100*1e18;
         withdrawProtection = true;
-        /*doHealthCheck = true;
-        lossLimitRatio = 1; //a small amount of loss is allowed (0.01%)
-        profitLimitRatio = 100; // 1% profit is probably a mistake. start loss at 0%*/
         want_decimals = IERC20Extended(address(want)).decimals();
 
         want.safeApprove(address(curvePool), uint256(-1));
@@ -239,20 +224,6 @@ contract Strategy is BaseStrategy {
     function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyAuthorized {
         slippageProtectionOut = _slippageProtectionOut;
     }
-
-    /* function setProfitLimitRatio(uint256 _profitLimitRatio) external onlyAuthorized {
-        require(_profitLimitRatio <= DENOMINATOR);
-        profitLimitRatio = _profitLimitRatio;
-    }
-
-    function setlossLimitRatio(uint256 _lossLimitRatio) external onlyAuthorized {
-        require(_lossLimitRatio <= DENOMINATOR);
-        lossLimitRatio = _lossLimitRatio;
-    }
-
-    function setDoHealthCheck(bool _doHealthCheck) external onlyAuthorized {
-        doHealthCheck = _doHealthCheck;
-    }*/
 
     function delegatedAssets() public override view returns (uint256) {
         return vault.strategies(address(this)).totalDebt;
@@ -399,46 +370,6 @@ contract Strategy is BaseStrategy {
 
     function _checkSlip(uint256 _wantToInvest) public view returns (bool){
         return true;
-        /*
-        //convertToMiddle
-        if(hasUnderlying){
-            if(want_decimals > middle_decimals){
-                _wantToInvest = _wantToInvest.div(10 ** uint256(want_decimals - middle_decimals));
-
-            }else if (want_decimals < middle_decimals){
-                _wantToInvest = _wantToInvest.mul(10 ** uint256(middle_decimals - want_decimals));
-            }
-        }
-
-        uint256 vp = virtualPriceToWant();
-        uint256 expectedOut = _wantToInvest.mul(1e18).div(vp);
-        
-        uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
-
-        uint256 roughOut;
-
-        if(poolSize == 2){
-            uint256[2] memory amounts; 
-            amounts[uint256(curveId)] = _wantToInvest;
-            //note doesnt take into account underlying 
-            roughOut = curvePool.calc_token_amount(amounts, true);
-   
-        }else if (poolSize == 3){
-            uint256[3] memory amounts; 
-            amounts[uint256(curveId)] = _wantToInvest;
-            //note doesnt take into account underlying
-            roughOut = curvePool.calc_token_amount(amounts, true);
-                    
-        }else{
-            uint256[4] memory amounts; 
-            amounts[uint256(curveId)] = _wantToInvest;
-            //note doesnt take into account underlying
-            roughOut = curvePool.calc_token_amount(amounts, true);
-        }        
-
-        if(roughOut >= maxSlip){
-            return true;
-        }*/
     }
 
 
@@ -488,8 +419,6 @@ contract Strategy is BaseStrategy {
                     }
                     
                 }
-
-                
                 //now add to yearn
                 yvToken.deposit();
 
@@ -497,14 +426,6 @@ contract Strategy is BaseStrategy {
             }else{
                 require(false, "quee");
             }
-
-            /*if(curveId == 0){
-                amounts = [_wantToInvest, 0];
-            }else{
-                amounts = [0, _wantToInvest];
-            }*/
-
-
         }
     }
 
@@ -549,13 +470,11 @@ contract Strategy is BaseStrategy {
             _amount = _amountOfCrv.mul(virtualPrice).div(1e18);
         }
 
-
         yvToken.withdraw(amountFromVault);
         if(withdrawProtection){
             //this tests that we liquidated all of the expected ytokens. Without it if we get back less then will mark it is loss
             require(yBalance.sub(yvToken.balanceOf(address(this))) >= amountFromVault.sub(1), "YVAULTWITHDRAWFAILED");
         }
-
 
         uint256 toWithdraw = curveToken.balanceOf(address(this)).sub(crvBeforeBalance);
 
@@ -588,9 +507,6 @@ contract Strategy is BaseStrategy {
     function prepareMigration(address _newStrategy) internal override {
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
     }
-
-    
-
 
     // Override this to add all tokens/tokenized positions this contract manages
     // on a *persistent* basis (e.g. not just for swapping back to want ephemerally)
