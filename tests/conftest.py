@@ -37,13 +37,17 @@ def dai(interface):
     yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
 
 @pytest.fixture
+def hbtc(interface):
+    yield interface.ERC20('0x0316EB71485b0Ab14103307bf65a021042c6d380')
+
+@pytest.fixture
 def usdt(interface):
     #this one is hbtc
     yield interface.ERC20('0xdAC17F958D2ee523a2206206994597C13D831ec7')
 
 
 @pytest.fixture
-def whale(accounts, web3, currency, chain, wbtc, dai):
+def whale(accounts, web3, currency, chain, wbtc, dai, hbtc):
     network.gas_price("0 gwei")
     network.gas_limit(6700000)
 
@@ -55,7 +59,7 @@ def whale(accounts, web3, currency, chain, wbtc, dai):
     #acc = accounts.at('0x006d0f31a00e1f9c017ab039e9d0ba699433a28c', force=True)
     acc = accounts.at("0xA929022c9107643515F5c777cE9a910F0D1e490C", force=True)
     #big huboi wallet
-    #acc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
+    hbtcAcc = accounts.at('0x24d48513EAc38449eC7C310A79584F87785f856F', force=True)
 
 
 
@@ -63,11 +67,13 @@ def whale(accounts, web3, currency, chain, wbtc, dai):
     wb = accounts.at('0x3dfd23A6c5E8BbcFc9581d2E864a68feb6a076d3', force=True)
     wbtc.transfer(acc, wbtc.balanceOf(wb),  {'from': wb})
     dai.transfer(acc, dai.balanceOf(daiAcc),  {'from': daiAcc})
+    dai.transfer(acc, hbtc.balanceOf(hbtcAcc),  {'from': hbtcAcc})
 
 
 
     assert currency.balanceOf(acc)  > 0
     assert wbtc.balanceOf(acc)  > 0
+    assert hbtc.balanceOf(acc)  > 0
     yield acc
 
 
@@ -106,6 +112,24 @@ def live_wbtc_vault(pm):
     vault = Vault.at('0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E')
     yield vault
 
+@pytest.fixture
+def wbtc_vault(pm, gov, rewards, guardian, wbtc):
+    currency = wbtc
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
+@pytest.fixture
+def hbtc_vault(pm, gov, rewards, guardian, hbtc):
+    currency = hbtc
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
 #@pytest.fixture
 #def live_strategy_wbtc(Strategy):
 #    yield Strategy.at('0x04A508664B053E0A08d5386303E649925CBF763c')
@@ -117,6 +141,16 @@ def obCRV(interface):
 @pytest.fixture
 def threecrv(interface):
     yield interface.ICrvV3('0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490')
+
+
+@pytest.fixture
+def zeroaddress():
+    yield "0x0000000000000000000000000000000000000000"
+
+@pytest.fixture
+def sbtccrv(interface):
+    yield interface.ICrvV3('0x075b1bb99792c9E1041bA13afEf80C91a1e70fB3')
+    
 
 @pytest.fixture
 def usdn3crv(interface):
@@ -133,7 +167,7 @@ def depositUsdn(interface):
 
 @pytest.fixture
 def curvePoolObtc(interface):
-    yield interface.ICurveFi('0xd81dA8D904b52208541Bade1bD6595D8a251F8dd')
+    yield interface.ICurveFi('0xd5BCf53e2C81e1991570f33Fa881c49EEa570C8D')
 
 @pytest.fixture
 def ibCurvePool(interface):
@@ -296,8 +330,14 @@ def strategy_wbtc_hbtc(strategist, keeper, live_wbtc_vault, Strategy, curvePool,
     yield strategy
 
 @pytest.fixture
-def strategy_wbtc_obtc(strategist, keeper, live_wbtc_vault, Strategy, curvePoolObtc, obCRV, yvaultv2Obtc):
-    strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, False)
+def strategy_wbtc_obtc(strategist, keeper, wbtc_vault, Strategy, curvePoolObtc, obCRV, sbtccrv, yvaultv2Obtc):
+    strategy = strategist.deploy(Strategy, wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, sbtccrv, False)
+    strategy.setKeeper(keeper)
+    yield strategy
+
+@pytest.fixture
+def strategy_hbtc_hbtc(strategist, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
+    strategy = strategist.deploy(Strategy, hbtc_vault, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
     strategy.setKeeper(keeper)
     yield strategy
 

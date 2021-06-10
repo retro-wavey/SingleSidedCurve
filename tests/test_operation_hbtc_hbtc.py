@@ -7,15 +7,15 @@ import random
 import brownie
 
 
-def test_wbtc_obtc(wbtc,stratms, whale,Strategy, strategy_wbtc_obtc, accounts, yvaultv2Obtc,chain,wbtc_vault, ychad, gov,strategist, interface):
+def test_hbtc_hbtc(wbtc,stratms, whale,Strategy, strategy_hbtc_hbtc, accounts, yvaultv2,chain,hbtc_vault, ychad, gov,strategist, interface):
     
-    vault = wbtc_vault
+    vault = hbtc_vault
     currency = interface.ERC20(vault.token())
     decimals = currency.decimals()
     gov = accounts.at(vault.governance(), force=True)
-    strategy = strategy_wbtc_obtc
+    strategy = strategy_hbtc_hbtc
 
-    yvault = yvaultv2Obtc
+    yvault = yvaultv2
     #amount = 1000*1e6
     #amounts = [0, 0, amount]
     print("curveid: ", strategy.curveId())
@@ -61,7 +61,7 @@ def test_wbtc_obtc(wbtc,stratms, whale,Strategy, strategy_wbtc_obtc, accounts, y
     chain.sleep(21600)
     chain.mine(1)
  
-    vault.withdraw({"from": whale})
+    vault.withdraw(vault.balanceOf(whale),whale, 200, {"from": whale})
     whale_after = currency.balanceOf(whale)
     print("profit =", (whale_after - whale_before)/(10 ** (decimals)))
     print("balance left =", vault.balanceOf(whale))
