@@ -219,16 +219,16 @@ contract Strategy is BaseStrategy {
         return string(abi.encodePacked("SingleSidedCrv", IERC20Extended(address(want)).symbol()));
     }
 
-    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyGovernance {
+    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyAuthorized {
         minTimePerInvest = _minTimePerInvest;
     }
-    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyGovernance {
+    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyAuthorized {
         maxSingleInvest = _maxSingleInvest;
     }
-    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyGovernance {
+    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyAuthorized {
         slippageProtectionIn = _slippageProtectionIn;
     }
-    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyGovernance {
+    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyAuthorized {
         slippageProtectionOut = _slippageProtectionOut;
     }
 

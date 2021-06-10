@@ -338,8 +338,16 @@ def strategy_wbtc_obtc(strategist, keeper, wbtc_vault, Strategy, curvePoolObtc, 
 @pytest.fixture
 def strategy_hbtc_hbtc(strategist, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
     strategy = strategist.deploy(Strategy, hbtc_vault, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
-    strategy.setKeeper(keeper)
+    
     yield strategy
+
+@pytest.fixture
+def clonedstrategy_hbtc_hbtc(strategist, strategy_hbtc_hbtc, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
+    strategy = strategy_hbtc_hbtc
+    tx = strategy.cloneSingleSidedCurve(hbtc_vault, strategist, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
+    new_strategy = Strategy.at(tx.return_value)
+    
+    yield new_strategy
 
 @pytest.fixture
 def strategy(strategist, keeper, vault, Strategy):

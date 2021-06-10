@@ -7,7 +7,7 @@ import random
 import brownie
 
 
-def test_hbtc_hbtc(wbtc,stratms, whale,Strategy, strategy_hbtc_hbtc, accounts, yvaultv2,chain,hbtc_vault, ychad, gov,strategist, interface):
+def test_hbtc_hbtc(wbtc,stratms,clonedstrategy_hbtc_hbtc, whale,Strategy, strategy_hbtc_hbtc, accounts, yvaultv2,chain,hbtc_vault, ychad, gov,strategist, interface):
     
     vault = hbtc_vault
     currency = interface.ERC20(vault.token())
@@ -39,6 +39,11 @@ def test_hbtc_hbtc(wbtc,stratms, whale,Strategy, strategy_hbtc_hbtc, accounts, y
 
     strategy.harvest({'from': strategist})
     genericStateOfStrat(strategy, currency, vault)
+
+    currency.transfer(strategy, 1, {'from': whale})
+    vault.migrateStrategy(strategy, clonedstrategy_hbtc_hbtc)
+    genericStateOfStrat(strategy, currency, vault)
+    strategy = clonedstrategy_hbtc_hbtc
     #genericStateOfStrat(strategy, currency, vault)
     #genericStateOfVault(vault, currency)
 
