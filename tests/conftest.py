@@ -115,6 +115,10 @@ def obCRV(interface):
     yield interface.ICrvV3('0x2fE94ea3d5d4a175184081439753DE15AeF9d614')
 
 @pytest.fixture
+def threecrv(interface):
+    yield interface.ICrvV3('0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490')
+
+@pytest.fixture
 def usdn3crv(interface):
     yield interface.ICrvV3('0x4f3E8F405CF5aFC05D68142F3783bDfE13811522')
 @pytest.fixture
@@ -280,8 +284,8 @@ def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, i
     yield strategy
 
 @pytest.fixture
-def strategy_dai_usdn(strategist, keeper, dai_vault, Strategy, depositUsdn, usdn3crv, usdnyvault):
-    strategy = strategist.deploy(Strategy, dai_vault, 1_000_000*1e18, 3600, 5000, depositUsdn, usdn3crv, usdnyvault,4, True, False)
+def strategy_dai_usdn(strategist, keeper, dai_vault, Strategy, depositUsdn, usdn3crv, usdnyvault, threecrv):
+    strategy = strategist.deploy(Strategy, dai_vault, 1_000_000*1e18, 3600, 5000, depositUsdn, usdn3crv, usdnyvault,4, threecrv, False)
     #strategy.setKeeper(keeper)
     yield strategy
 

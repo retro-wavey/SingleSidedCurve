@@ -53,7 +53,7 @@ contract Strategy is BaseStrategy {
     int128 public curveId;
     uint256 public poolSize;
     bool public hasUnderlying;
-    bool public metaPool;
+    address public metaToken;
 
     bool public withdrawProtection;
 
@@ -66,10 +66,10 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _metaPool,
+        address _metaToken,
         bool _hasUnderlying
     ) public BaseStrategy(_vault) {
-         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaPool, _hasUnderlying);
+         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying);
     }
 
     function initialize(
@@ -82,12 +82,12 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _metaPool,
+        address _metaToken,
         bool _hasUnderlying
     ) external {
         //note: initialise can only be called once. in _initialize in BaseStrategy we have: require(address(want) == address(0), "Strategy already initialized");
         _initialize(_vault, _strategist, _strategist, _strategist);
-        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaPool, _hasUnderlying);
+        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying);
     }
 
     function _initializeStrat(
@@ -98,7 +98,7 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _metaPool,
+        address _metaToken,
         bool _hasUnderlying
     ) internal {
         require(want_decimals == 0, "Already Initialized");
@@ -107,14 +107,14 @@ contract Strategy is BaseStrategy {
         
         curvePool = ICurveFi(_curvePool);
 
-        if(_metaPool){
+        if(_metaToken != address(0)){
             basePool = ICurveFi(curvePool.pool());
-            metaPool = true;
+            metaToken = _metaToken;
             
             for(uint i = 0; i < _poolSize; i++){
                 if( i == 0){
                     if(curvePool.coins(0) == address(want)){
-                        require(false, "ONLY USE META FOR 3CRV");
+                        require(false, "ONLY USE META FOR BASE");
                     }
                 }else{
                     if(curvePool.base_coins(i-1) == address(want)){
@@ -176,8 +176,8 @@ contract Strategy is BaseStrategy {
         want.safeApprove(address(curvePool), uint256(-1));
 
         //deposit contract needs permissions
-        if(metaPool){
-            IERC20(0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490).safeApprove(address(curvePool), uint256(-1)); // 3crv    
+        if(metaToken != address(0)){
+            IERC20(metaToken).safeApprove(address(curvePool), uint256(-1)); // 3crv    
             curveToken.approve(address(curvePool), uint256(-1));
         }
         curveToken.approve(address(yvToken), uint256(-1));
@@ -194,7 +194,7 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        bool _metaPool,
+        address _metaToken,
         bool _hasUnderlying
     ) external returns (address newStrategy){
          bytes20 addressBytes = bytes20(address(this));
@@ -208,7 +208,7 @@ contract Strategy is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaPool, _hasUnderlying);
+        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying);
 
         emit Cloned(newStrategy);
 
@@ -234,8 +234,9 @@ contract Strategy is BaseStrategy {
 
 
     function delegatedAssets() public override view returns (uint256) {
-        return Math.min(curveTokenToWant(curveTokensInYVault()), vault.strategies(address(this)).totalDebt);
+        return vault.strategies(address(this)).totalDebt;
     }
+
     function estimatedTotalAssets() public override view returns (uint256) {
         uint256 totalCurveTokens = curveTokensInYVault().add(curveToken.balanceOf(address(this)));
         return want.balanceOf(address(this)).add(curveTokenToWant(totalCurveTokens));
@@ -256,7 +257,7 @@ contract Strategy is BaseStrategy {
     function virtualPriceToWant() public view returns (uint256) {
 
         uint256 virtualPrice = basePool.get_virtual_price();
-        /*if(metaPool){
+        /*if(metaToken){
             //warning: base virtual price is not cached and not live
             virtualPrice = virtualPrice.mul(basePool.base_virtual_price()).div(1e18);
         }*/
