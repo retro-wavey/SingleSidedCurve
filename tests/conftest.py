@@ -1,6 +1,6 @@
 import pytest
-from brownie import config
-from brownie import network
+from brownie import config, network, ZERO_ADDRESS
+
 
 @pytest.fixture
 def andre(accounts):
@@ -150,7 +150,7 @@ def zeroaddress():
 @pytest.fixture
 def sbtccrv(interface):
     yield interface.ICrvV3('0x075b1bb99792c9E1041bA13afEf80C91a1e70fB3')
-    
+
 @pytest.fixture
 def healthcheck(Contract):
     yield Contract('0xDDCea799fF1699e98EDF118e0629A974Df7DF012')
@@ -179,7 +179,7 @@ def ibCurvePool(interface):
 @pytest.fixture
 def ib3CRV(interface):
     yield interface.ICrvV3('0x5282a4eF67D9C33135340fB3289cc1711c13638C')
-    
+
 
 @pytest.fixture
 def devms(accounts):
@@ -194,7 +194,7 @@ def stratms(accounts):
 def orb(accounts):
     acc = accounts.at('0x710295b5f326c2e47e6dd2e7f6b5b0f7c5ac2f24', force=True)
     yield acc
-    
+
 
 @pytest.fixture
 def ychad(accounts):
@@ -209,7 +209,7 @@ def samdev(accounts):
     acc = accounts.at('0xC3D6880fD95E06C816cB030fAc45b3ffe3651Cb0', force=True)
 
 
-    
+
     yield acc
 
 @pytest.fixture
@@ -245,7 +245,7 @@ def vault(pm, gov, rewards, guardian, currency):
     vault.initialize(currency, gov, rewards, "", "", guardian)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
-    
+
 @pytest.fixture
 def wbtc_vault(pm, gov, rewards, guardian, wbtc):
     currency = wbtc
@@ -312,7 +312,7 @@ def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy
     #strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
     tx = live_strategy_wbtc.cloneSingleSidedCurve(live_usdt_vault, strategist, strategist, strategist, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, {'from': strategist})
     yield Strategy.at(tx.return_value)
-    
+
 
 @pytest.fixture
 def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault,healthcheck):
@@ -343,7 +343,7 @@ def strategy_wbtc_obtc(gov, keeper, wbtc_vault,healthcheck, Strategy, curvePoolO
 @pytest.fixture
 def strategy_hbtc_hbtc(gov, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
     strategy = gov.deploy(Strategy, hbtc_vault, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
-    
+
     yield strategy
 
 @pytest.fixture
@@ -351,7 +351,7 @@ def clonedstrategy_hbtc_hbtc(strategist, strategy_hbtc_hbtc, keeper, hbtc_vault,
     strategy = strategy_hbtc_hbtc
     tx = strategy.cloneSingleSidedCurve(hbtc_vault, strategist, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
     new_strategy = Strategy.at(tx.return_value)
-    
+
     yield new_strategy
 
 @pytest.fixture
@@ -359,6 +359,31 @@ def strategy(strategist, keeper, vault, Strategy):
     strategy = strategist.deploy(Strategy, vault, 2*1e18)
     strategy.setKeeper(keeper)
     yield strategy
+
+
+@pytest.fixture
+def zap_strategy(Contract, strategist, keeper, vault, Strategy):
+    susd_vault = Contract("0xa5cA62D95D24A4a350983D5B8ac4EB8638887396")
+    susd2_pool = Contract("0xA5407eAE9Ba41422680e2e00537571bcC53efBfD")
+    susd2_zap = Contract("0xFCBa3E75865d2d561BE8D220616520c171F12851")
+    susd2_token = Contract("0xC25a3A3b969415c80451098fa907EC722572917F")
+    crv_susd2_vault = Contract("0x5a770DbD3Ee6bAF2802D29a901Ef11501C44797A")
+
+    yield strategist.deploy(
+        Strategy,
+        susd_vault,
+        1_000_000 * 1e18, # maxSingleInvest
+        3600, # minTimePerInvest,
+        50, # slippageProtectionIn
+        susd2_pool,
+        susd2_zap,
+        susd2_token,
+        crv_susd2_vault,
+        4,
+        ZERO_ADDRESS,
+        False,
+    )
+
 
 @pytest.fixture
 def zapper(strategist, ZapSteth):
@@ -412,5 +437,3 @@ def greyhat(accounts, andre, token, vault):
     # Deposit half their stack
     vault.deposit(bal // 2, {"from": a})
     yield a
-
-
