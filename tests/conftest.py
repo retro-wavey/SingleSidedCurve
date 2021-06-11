@@ -362,7 +362,7 @@ def strategy(strategist, keeper, vault, Strategy):
 
 
 @pytest.fixture
-def zap_strategy(Contract, strategist, keeper, vault, Strategy):
+def zap_strategy(Contract, strategist, keeper, vault, StrategySusdv2):
     susd_vault = Contract("0xa5cA62D95D24A4a350983D5B8ac4EB8638887396")
     susd2_pool = Contract("0xA5407eAE9Ba41422680e2e00537571bcC53efBfD")
     susd2_zap = Contract("0xFCBa3E75865d2d561BE8D220616520c171F12851")
@@ -370,7 +370,7 @@ def zap_strategy(Contract, strategist, keeper, vault, Strategy):
     crv_susd2_vault = Contract("0x5a770DbD3Ee6bAF2802D29a901Ef11501C44797A")
 
     yield strategist.deploy(
-        Strategy,
+        StrategySusdv2,
         susd_vault,
         1_000_000 * 1e18, # maxSingleInvest
         3600, # minTimePerInvest,
