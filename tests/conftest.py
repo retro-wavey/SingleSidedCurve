@@ -113,6 +113,12 @@ def live_wbtc_vault(pm):
     yield vault
 
 @pytest.fixture
+def live_hbtc_vault(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0x0F6121fB28C7C42916d663171063c62684598f9F')
+    yield vault
+
+@pytest.fixture
 def wbtc_vault(pm, gov, rewards, guardian, wbtc):
     currency = wbtc
     Vault = pm(config["dependencies"][0]).Vault
@@ -343,6 +349,12 @@ def strategy_wbtc_obtc(gov, keeper, wbtc_vault,healthcheck, Strategy, curvePoolO
 @pytest.fixture
 def strategy_hbtc_hbtc(gov, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
     strategy = gov.deploy(Strategy, hbtc_vault, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
+    
+    yield strategy
+
+@pytest.fixture
+def strategy_hbtc_hbtc_live(Strategy):
+    strategy = Strategy.at('0x3F64bb4C334488765A82a697cb210DA9BB876B67')
     
     yield strategy
 
