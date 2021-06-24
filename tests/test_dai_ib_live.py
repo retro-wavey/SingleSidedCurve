@@ -163,8 +163,6 @@ def test_snapshot(
     usdt,
     stratms,
     Strategy,
-    ibCurvePool,
-    strategy_dai_ib,
     accounts,
     ib3CRV,
     ibyvault,
@@ -172,7 +170,6 @@ def test_snapshot(
     rewards,
     chain,
     Contract,
-    strategy_usdt_ib,
     live_vault_dai,
     ychad,
     gov,
@@ -209,7 +206,7 @@ def test_snapshot(
     currency = interface.ERC20(vault.token())
     decimals = currency.decimals()
     gov = accounts.at(vault.governance(), force=True)
-    strategy = Strategy.at('0x6a6B94A78cBA0F55BC4D41b37f2229427800B4dA')
+    strategy = Strategy.at('0x30010039Ea4a0c4fa1Ac051E8aF948239678353d')
     strategist = accounts.at(strategy.strategist(), force=True)
     #vault.updateStrategyDebtRatio(strategy, 1250, {"from": ms})
 
