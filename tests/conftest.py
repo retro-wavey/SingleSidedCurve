@@ -87,6 +87,9 @@ def yvaultv2(interface):
 def yvaultv2Obtc(interface):
     yield interface.IVaultV2('0xe9Dc63083c464d6EDcCFf23444fF3CFc6886f6FB')
 @pytest.fixture
+def yvaultv2Bbtc(interface):
+    yield interface.IVaultV2('0x8fA3A9ecd9EFb07A8CE90A6eb014CF3c0E3B32Ef')
+@pytest.fixture
 def yhbtcstrategyv2(Strategy):
     yield Strategy.at('0x91cBf0014a966615e1050c90A1aBf1d1d5d8cffd')
 
@@ -145,6 +148,10 @@ def obCRV(interface):
     yield interface.ICrvV3('0x2fE94ea3d5d4a175184081439753DE15AeF9d614')
 
 @pytest.fixture
+def bbtcCRV(interface):
+    yield interface.ICrvV3('0x410e3E86ef427e30B9235497143881f717d93c2A')
+
+@pytest.fixture
 def threecrv(interface):
     yield interface.ICrvV3('0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490')
 
@@ -177,6 +184,10 @@ def depositUsdn(interface):
 @pytest.fixture
 def curvePoolObtc(interface):
     yield interface.ICurveFi('0xd5BCf53e2C81e1991570f33Fa881c49EEa570C8D')
+
+@pytest.fixture
+def curvePoolBbtc(interface):
+    yield interface.ICurveFi('0xC45b2EEe6e09cA176Ca3bB5f7eEe7C47bF93c756')
 
 @pytest.fixture
 def ibCurvePool(interface):
@@ -288,6 +299,11 @@ def live_strategy(Strategy):
 
     yield strategy
 
+@pytest.fixture
+def live_strategy_wbtc_obt(Strategy):
+    strategy = Strategy.at('0x64B2a32f030D9210E51ed8884C0D58b89137Ca81')
+
+    yield strategy
 
 @pytest.fixture
 def live_strategy_usdt(Strategy):
@@ -344,6 +360,22 @@ def strategy_wbtc_obtc(gov, keeper, wbtc_vault,healthcheck, Strategy, curvePoolO
     strategy = gov.deploy(Strategy, wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, sbtccrv, False, "ssc wbtc obtc")
     strategy.setHealthCheck(healthcheck)
     strategy.setKeeper(keeper)
+    yield strategy
+
+@pytest.fixture
+def live_strategy_wbtc_bbtc(gov, keeper, live_strategy_wbtc_obt, live_wbtc_vault,healthcheck, Strategy, curvePoolBbtc, bbtcCRV, sbtccrv, yvaultv2Bbtc, accounts):
+    gov = accounts.at(live_wbtc_vault.governance(), force=True)
+    strategist = gov
+    tx = live_strategy_wbtc_obt.cloneSingleSidedCurve(live_wbtc_vault, strategist, 60*1e8, 360, 500, curvePoolBbtc, bbtcCRV, yvaultv2Bbtc,4,sbtccrv, False, "ssc wbtc bbtc",{'from': strategist})
+    strategy = Strategy.at(tx.return_value)
+    strategy.setHealthCheck(healthcheck, {'from': gov})
+    yield strategy
+
+@pytest.fixture
+def live_strategy_wbtc_obtc(gov, keeper, live_wbtc_vault,healthcheck, Strategy, curvePoolObtc, obCRV, sbtccrv, yvaultv2Obtc, accounts):
+    gov = accounts.at(live_wbtc_vault.governance(), force=True)
+    strategy = gov.deploy(Strategy, live_wbtc_vault, 60*1e8, 360, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, sbtccrv, False, "ssc wbtc obtc")
+    strategy.setHealthCheck(healthcheck, {'from': gov})
     yield strategy
 
 @pytest.fixture
