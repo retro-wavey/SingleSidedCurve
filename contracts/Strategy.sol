@@ -46,6 +46,7 @@ contract Strategy is BaseStrategy {
     uint256 public slippageProtectionIn;// = 50; //out of 10000. 50 = 0.5%
     uint256 public slippageProtectionOut;// = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10_000;
+    string internal strategyName;
 
     uint8 private want_decimals;
     uint8 private middle_decimals;
@@ -67,9 +68,10 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         uint256 _poolSize,
         address _metaToken,
-        bool _hasUnderlying
+        bool _hasUnderlying,
+        string memory _strategyName
     ) public BaseStrategy(_vault) {
-         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying);
+         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying, _strategyName);
     }
 
     function initialize(
@@ -83,11 +85,12 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         uint256 _poolSize,
         address _metaToken,
-        bool _hasUnderlying
+        bool _hasUnderlying,
+        string memory _strategyName
     ) external {
         //note: initialise can only be called once. in _initialize in BaseStrategy we have: require(address(want) == address(0), "Strategy already initialized");
         _initialize(_vault, _strategist, _strategist, _strategist);
-        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying);
+        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying, _strategyName);
     }
 
     function _initializeStrat(
@@ -99,7 +102,8 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         uint256 _poolSize,
         address _metaToken,
-        bool _hasUnderlying
+        bool _hasUnderlying,
+        string memory _strategyName
     ) internal {
         require(want_decimals == 0, "Already Initialized");
         require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
@@ -148,9 +152,10 @@ contract Strategy is BaseStrategy {
         minTimePerInvest = _minTimePerInvest;
         slippageProtectionIn = _slippageProtectionIn;
         slippageProtectionOut = _slippageProtectionIn; // use In to start with to save on stack
-
         poolSize = _poolSize;
         hasUnderlying = _hasUnderlying;
+        strategyName = _strategyName;
+
 
         yvToken = VaultAPI(_yvToken);
         curveToken = ICrvV3(_curveToken);
@@ -188,7 +193,8 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         uint256 _poolSize,
         address _metaToken,
-        bool _hasUnderlying
+        bool _hasUnderlying,
+        string memory _strategyName
     ) external returns (address newStrategy){
          bytes20 addressBytes = bytes20(address(this));
 
@@ -201,7 +207,7 @@ contract Strategy is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying);
+        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying, _strategyName);
 
         emit Cloned(newStrategy);
 
@@ -209,7 +215,7 @@ contract Strategy is BaseStrategy {
 
 
     function name() external override view returns (string memory) {
-        return string(abi.encodePacked("SingleSidedCrv", IERC20Extended(address(want)).symbol()));
+        return strategyName;
     }
 
     function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyAuthorized {

@@ -316,39 +316,39 @@ def live_usdt_vault(pm):
 @pytest.fixture
 def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy_wbtc, ibCurvePool, ib3CRV, ibyvault):
     #strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
-    tx = live_strategy_wbtc.cloneSingleSidedCurve(live_usdt_vault, strategist, strategist, strategist, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, {'from': strategist})
+    tx = live_strategy_wbtc.cloneSingleSidedCurve(live_usdt_vault, strategist, strategist, strategist, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, "ssc ib3crv",{'from': strategist})
     yield Strategy.at(tx.return_value)
     
 
 @pytest.fixture
 def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault,healthcheck):
-    strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
+    strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, "ssc ib3crv")
     strategy.setHealthCheck(healthcheck)
     strategy.setKeeper(keeper)
     yield strategy
 
 @pytest.fixture
 def strategy_dai_usdn(strategist, keeper, dai_vault, Strategy, depositUsdn, usdn3crv, usdnyvault, threecrv):
-    strategy = strategist.deploy(Strategy, dai_vault, 1_000_000*1e18, 3600, 5000, depositUsdn, usdn3crv, usdnyvault,4, threecrv, False)
+    strategy = strategist.deploy(Strategy, dai_vault, 1_000_000*1e18, 3600, 5000, depositUsdn, usdn3crv, usdnyvault,4, threecrv, False,  "ssc ib3crv")
     #strategy.setKeeper(keeper)
     yield strategy
 
 @pytest.fixture
 def strategy_wbtc_hbtc(strategist, keeper, live_wbtc_vault, Strategy, curvePool, hCRV, yvaultv2):
-    strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePool, hCRV, yvaultv2,2, False)
+    strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePool, hCRV, yvaultv2,2, False, "ssc wbtc hbtc")
     strategy.setKeeper(keeper)
     yield strategy
 
 @pytest.fixture
 def strategy_wbtc_obtc(gov, keeper, wbtc_vault,healthcheck, Strategy, curvePoolObtc, obCRV, sbtccrv, yvaultv2Obtc):
-    strategy = gov.deploy(Strategy, wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, sbtccrv, False)
+    strategy = gov.deploy(Strategy, wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, sbtccrv, False, "ssc wbtc obtc")
     strategy.setHealthCheck(healthcheck)
     strategy.setKeeper(keeper)
     yield strategy
 
 @pytest.fixture
 def strategy_hbtc_hbtc(gov, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
-    strategy = gov.deploy(Strategy, hbtc_vault, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
+    strategy = gov.deploy(Strategy, hbtc_vault, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False,  "ssc hbtc hbtc")
     
     yield strategy
 
@@ -361,7 +361,7 @@ def strategy_hbtc_hbtc_live(Strategy):
 @pytest.fixture
 def clonedstrategy_hbtc_hbtc(strategist, strategy_hbtc_hbtc, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
     strategy = strategy_hbtc_hbtc
-    tx = strategy.cloneSingleSidedCurve(hbtc_vault, strategist, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False)
+    tx = strategy.cloneSingleSidedCurve(hbtc_vault, strategist, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False,  "ssc hbtc hbtc")
     new_strategy = Strategy.at(tx.return_value)
     
     yield new_strategy
