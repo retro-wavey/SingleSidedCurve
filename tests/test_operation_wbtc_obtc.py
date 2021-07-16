@@ -41,6 +41,7 @@ def test_wbtc_obtc(wbtc,stratms, whale,Strategy, strategy_wbtc_obtc, accounts, y
     genericStateOfStrat(strategy, currency, vault)
     #genericStateOfStrat(strategy, currency, vault)
     #genericStateOfVault(vault, currency)
+    print(yvault.pricePerShare()/1e18)
 
     ibcrvStrat1 = Strategy.at(yvault.withdrawalQueue(0))
     ibcrvStrat2 = Strategy.at(yvault.withdrawalQueue(1))
@@ -54,6 +55,7 @@ def test_wbtc_obtc(wbtc,stratms, whale,Strategy, strategy_wbtc_obtc, accounts, y
     ibcrvStrat2.harvest({"from": vGov})
     chain.sleep(21600)
     chain.mine(1)
+    print(yvault.pricePerShare()/1e18)
     strategy.harvest({'from': strategist})
     print(vault.strategies(strategy))
     genericStateOfStrat(strategy, currency, vault)

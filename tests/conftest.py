@@ -90,6 +90,9 @@ def yvaultv2Obtc(interface):
 def yvaultv2Bbtc(interface):
     yield interface.IVaultV2('0x8fA3A9ecd9EFb07A8CE90A6eb014CF3c0E3B32Ef')
 @pytest.fixture
+def yvaultv2Pbtc(interface):
+    yield interface.IVaultV2('0x3c5DF3077BcF800640B5DAE8c91106575a4826E6')
+@pytest.fixture
 def yhbtcstrategyv2(Strategy):
     yield Strategy.at('0x91cBf0014a966615e1050c90A1aBf1d1d5d8cffd')
 
@@ -152,6 +155,10 @@ def bbtcCRV(interface):
     yield interface.ICrvV3('0x410e3E86ef427e30B9235497143881f717d93c2A')
 
 @pytest.fixture
+def pbtcCRV(interface):
+    yield interface.ICrvV3('0xDE5331AC4B3630f94853Ff322B66407e0D6331E8')
+
+@pytest.fixture
 def threecrv(interface):
     yield interface.ICrvV3('0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490')
 
@@ -188,6 +195,10 @@ def curvePoolObtc(interface):
 @pytest.fixture
 def curvePoolBbtc(interface):
     yield interface.ICurveFi('0xC45b2EEe6e09cA176Ca3bB5f7eEe7C47bF93c756')
+
+@pytest.fixture
+def curvePoolPbtc(interface):
+    yield interface.ICurveFi('0x11F419AdAbbFF8d595E7d5b223eee3863Bb3902C')
 
 @pytest.fixture
 def ibCurvePool(interface):
@@ -367,6 +378,15 @@ def live_strategy_wbtc_bbtc(gov, keeper, live_strategy_wbtc_obt, live_wbtc_vault
     gov = accounts.at(live_wbtc_vault.governance(), force=True)
     strategist = gov
     tx = live_strategy_wbtc_obt.cloneSingleSidedCurve(live_wbtc_vault, strategist, 60*1e8, 360, 500, curvePoolBbtc, bbtcCRV, yvaultv2Bbtc,4,sbtccrv, False, "ssc wbtc bbtc",{'from': strategist})
+    strategy = Strategy.at(tx.return_value)
+    strategy.setHealthCheck(healthcheck, {'from': gov})
+    yield strategy
+
+@pytest.fixture
+def live_strategy_wbtc_pbtc(gov, keeper, live_strategy_wbtc_obt, live_wbtc_vault,healthcheck, Strategy, curvePoolPbtc, pbtcCRV, sbtccrv, yvaultv2Pbtc, accounts):
+    gov = accounts.at(live_wbtc_vault.governance(), force=True)
+    strategist = gov
+    tx = live_strategy_wbtc_obt.cloneSingleSidedCurve(live_wbtc_vault, strategist, 60*1e8, 360, 500, curvePoolPbtc, pbtcCRV, yvaultv2Pbtc,4,sbtccrv, False, "ssc wbtc pbtc",{'from': strategist})
     strategy = Strategy.at(tx.return_value)
     strategy.setHealthCheck(healthcheck, {'from': gov})
     yield strategy

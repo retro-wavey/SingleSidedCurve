@@ -7,16 +7,16 @@ import random
 import brownie
 
 
-def test_wbtc_bbtc_live(wbtc,stratms, whale,Strategy, live_strategy_wbtc_bbtc, accounts, yvaultv2Bbtc,chain,live_wbtc_vault, ychad, gov,strategist, interface):
+def test_wbtc_pbtc_live(wbtc,stratms, whale,Strategy, live_strategy_wbtc_pbtc, accounts, yvaultv2Pbtc,chain,live_wbtc_vault, ychad, gov,strategist, interface):
     
     vault = live_wbtc_vault
     currency = interface.ERC20(vault.token())
     decimals = currency.decimals()
     gov = accounts.at(vault.governance(), force=True)
     strategist = gov
-    strategy = live_strategy_wbtc_bbtc
+    strategy = live_strategy_wbtc_pbtc
 
-    yvault = yvaultv2Bbtc
+    yvault = yvaultv2Pbtc
     #amount = 1000*1e6
     #amounts = [0, 0, amount]
     print("curveid: ", strategy.curveId())
@@ -52,7 +52,7 @@ def test_wbtc_bbtc_live(wbtc,stratms, whale,Strategy, live_strategy_wbtc_bbtc, a
     ibcrvStrat1.harvest({"from": vGov})
     ibcrvStrat2.harvest({"from": vGov})
     chain.sleep(2628000)
-    chain.mine(200)
+    chain.mine(1)
     ibcrvStrat1.harvest({"from": vGov})
     ibcrvStrat2.harvest({"from": vGov})
     chain.sleep(210600)
