@@ -67,7 +67,9 @@ def test_tusd_tusd(wbtc,stratms, whale,Strategy, strategy_tusd_tusd, accounts, y
  
     vault.withdraw(vault.balanceOf(whale),whale, 200,{"from": whale})
     whale_after = currency.balanceOf(whale)
-    print("profit =", (whale_after - whale_before)/(10 ** (decimals)))
+    profit = (whale_after - whale_before)
+    print("profit =", profit/(10 ** (decimals)))
+    assert profit > 0
     print("balance left =", vault.balanceOf(whale))
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
