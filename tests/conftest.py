@@ -32,6 +32,11 @@ def wbtc(interface):
     yield interface.ERC20('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
 
 @pytest.fixture
+def tusd(interface):
+    #this one is hbtc
+    yield interface.ERC20('0x0000000000085d4780B73119b644AE5ecd22b376')
+
+@pytest.fixture
 def dai(interface):
     #this one is hbtc
     yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
@@ -93,6 +98,10 @@ def yvaultv2Bbtc(interface):
 def yvaultv2Pbtc(interface):
     yield interface.IVaultV2('0x3c5DF3077BcF800640B5DAE8c91106575a4826E6')
 @pytest.fixture
+def yvaultv2Tusd(interface):
+    yield interface.IVaultV2('0xf8768814b88281DE4F532a3beEfA5b85B69b9324')
+    
+@pytest.fixture
 def yhbtcstrategyv2(Strategy):
     yield Strategy.at('0x91cBf0014a966615e1050c90A1aBf1d1d5d8cffd')
 
@@ -127,6 +136,15 @@ def live_hbtc_vault(pm):
 @pytest.fixture
 def wbtc_vault(pm, gov, rewards, guardian, wbtc):
     currency = wbtc
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
+@pytest.fixture
+def tusd_vault(pm, gov, rewards, guardian, tusd):
+    currency = tusd
     Vault = pm(config["dependencies"][0]).Vault
     vault = gov.deploy(Vault)
     vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
@@ -191,6 +209,10 @@ def depositUsdn(interface):
 @pytest.fixture
 def curvePoolObtc(interface):
     yield interface.ICurveFi('0xd5BCf53e2C81e1991570f33Fa881c49EEa570C8D')
+
+@pytest.fixture
+def curvePoolTusd(interface):
+    yield interface.ICurveFi('0xEcd5e75AFb02eFa118AF914515D6521aaBd189F1')
 
 @pytest.fixture
 def curvePoolBbtc(interface):
@@ -374,6 +396,21 @@ def strategy_wbtc_obtc(gov, keeper, wbtc_vault,healthcheck, Strategy, curvePoolO
     yield strategy
 
 @pytest.fixture
+def strategy_tusd_tusd(gov, keeper, tusd_vault,healthcheck, Strategy, curvePoolTusd,  zeroaddress, yvaultv2Tusd):
+    strategy = gov.deploy(Strategy, tusd_vault, 1_000_000*1e18, 3600, 10_000, curvePoolTusd, curvePoolTusd, yvaultv2Tusd,2, zeroaddress, False, "ssc tusd tusd")
+    strategy.setHealthCheck(healthcheck)
+    strategy.setKeeper(keeper)
+    yield strategy
+
+@pytest.fixture
+def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault,healthcheck):
+    strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, "ssc ib3crv")
+    strategy.setHealthCheck(healthcheck)
+    strategy.setKeeper(keeper)
+    yield strategy
+
+
+@pytest.fixture
 def live_strategy_wbtc_bbtc(gov, keeper, live_strategy_wbtc_obt, live_wbtc_vault,healthcheck, Strategy, curvePoolBbtc, bbtcCRV, sbtccrv, yvaultv2Bbtc, accounts):
     gov = accounts.at(live_wbtc_vault.governance(), force=True)
     strategist = gov
@@ -409,6 +446,14 @@ def strategy_hbtc_hbtc_live(Strategy):
     strategy = Strategy.at('0x3F64bb4C334488765A82a697cb210DA9BB876B67')
     
     yield strategy
+
+@pytest.fixture
+def clonedstrategy_hbtc_hbtc(strategist, strategy_hbtc_hbtc, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
+    strategy = strategy_hbtc_hbtc
+    tx = strategy.cloneSingleSidedCurve(hbtc_vault, strategist, 30*1e18, 3600, 500, curvePool, hCRV, yvaultv2,2, zeroaddress, False,  "ssc hbtc hbtc")
+    new_strategy = Strategy.at(tx.return_value)
+    
+    yield new_strategy
 
 @pytest.fixture
 def clonedstrategy_hbtc_hbtc(strategist, strategy_hbtc_hbtc, keeper, hbtc_vault, Strategy, curvePool, hCRV, yvaultv2, zeroaddress):
