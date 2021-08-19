@@ -10,7 +10,6 @@ import "./interfaces/IWETH.sol";
 // These are the core Yearn libraries
 import "@yearnvaults/contracts/BaseStrategy.sol";
 
-
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -122,7 +121,7 @@ contract Strategy is BaseStrategy {
                     require(false, "incorrect want for curve pool");
                 }
             }
-        } else if (isWantEth()) {
+        } else if (isWantWETH()) {
             // Case where our want is ETH
             basePool = ICurveFi(_curvePool);
             require(curvePool.coins(0) == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE));
@@ -167,7 +166,7 @@ contract Strategy is BaseStrategy {
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
 
-        if (!isWantEth()) {
+        if (!isWantWETH()) {
             want.safeApprove(address(curvePool), type(uint256).max);
         }
 
@@ -212,7 +211,7 @@ contract Strategy is BaseStrategy {
 
     }
 
-    function isWantEth() internal view returns (bool) {
+    function isWantWETH() internal view returns (bool) {
         return address(want) == address(weth);
     }
 
@@ -258,14 +257,10 @@ contract Strategy is BaseStrategy {
         return virtualPriceToWant().mul(tokens).div(1e18);
     }
 
-    //we lose some precision here. but it shouldnt matter as we are underestimating
+    // we lose some precision here. but it shouldnt matter as we are underestimating
     function virtualPriceToWant() public view returns (uint256) {
 
         uint256 virtualPrice = basePool.get_virtual_price();
-        /*if(metaToken){
-            //warning: base virtual price is not cached and not live
-            virtualPrice = virtualPrice.mul(basePool.base_virtual_price()).div(1e18);
-        }*/
 
         if(want_decimals < 18){
             return virtualPrice.div(10 ** (uint256(uint8(18) - want_decimals)));
@@ -274,14 +269,6 @@ contract Strategy is BaseStrategy {
         }
 
     }
-    /*function virtualPriceToMiddle() public view returns (uint256) {
-        if(middle_decimals < 18){
-            return curvePool.get_virtual_price().div(10 ** (uint256(uint8(18) - middle_decimals)));
-        }else{
-            return curvePool.get_virtual_price();
-        }
-
-    }*/
 
     function curveTokensInYVault() public view returns (uint256) {
         uint256 balance = yvToken.balanceOf(address(this));
@@ -359,81 +346,70 @@ contract Strategy is BaseStrategy {
         return amounts[amounts.length - 1];
     }
 
-    function _checkSlip(uint256 _wantToInvest) public view returns (bool){
-        return true;
-    }
-
     function adjustPosition(uint256 _debtOutstanding) internal override {
 
-        if(lastInvest.add(minTimePerInvest) > block.timestamp ){
+        if (lastInvest.add(minTimePerInvest) > block.timestamp) {
             return;
         }
 
         // Invest the rest of the want
         uint256 _wantToInvest = Math.min(want.balanceOf(address(this)), maxSingleInvest);
-
-        if (_wantToInvest > 0) {
-            //add to curve (single sided)
-            if(_checkSlip(_wantToInvest)){
-
-                uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
-
-                uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
-
-                //pool size cannot be more than 4 or less than 2
-                if(isWantEth()) {
-                  weth.withdraw(_wantToInvest);
-                  uint256[2] memory amounts;
-                  amounts[0] = _wantToInvest;
-                  if(hasUnderlying) {
-                      curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip, true);
-                  } else {
-                      curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip);
-                  }
-
-                } else if (poolSize == 2){
-                    uint256[2] memory amounts;
-                    amounts[uint256(curveId)] = _wantToInvest;
-                    if(hasUnderlying){
-                        curvePool.add_liquidity(amounts, maxSlip, true);
-                    }else{
-                        curvePool.add_liquidity(amounts, maxSlip);
-                    }
-
-                }else if (poolSize == 3){
-                    uint256[3] memory amounts;
-                    amounts[uint256(curveId)] = _wantToInvest;
-                    if(hasUnderlying){
-                        curvePool.add_liquidity(amounts, maxSlip, true);
-                    }else{
-                        curvePool.add_liquidity(amounts, maxSlip);
-                    }
-
-                }else{
-                    uint256[4] memory amounts;
-                    amounts[uint256(curveId)] = _wantToInvest;
-                    if(hasUnderlying){
-                        curvePool.add_liquidity(amounts, maxSlip, true);
-                    }else{
-                        curvePool.add_liquidity(amounts, maxSlip);
-                    }
-
-                }
-                //now add to yearn
-                yvToken.deposit();
-
-                lastInvest = block.timestamp;
-            }else{
-                require(false, "quee");
-            }
+        if (_wantToInvest == 0) {
+            return;
         }
+
+        uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
+        uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
+
+        //pool size cannot be more than 4 or less than 2
+        if (isWantWETH()) {
+          weth.withdraw(_wantToInvest);
+          uint256[2] memory amounts;
+          amounts[0] = _wantToInvest;
+          if (hasUnderlying) {
+              curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip, true);
+          } else {
+              curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip);
+          }
+
+        } else if (poolSize == 2) {
+            uint256[2] memory amounts;
+            amounts[uint256(curveId)] = _wantToInvest;
+            if(hasUnderlying) {
+                curvePool.add_liquidity(amounts, maxSlip, true);
+            } else {
+                curvePool.add_liquidity(amounts, maxSlip);
+            }
+
+        } else if (poolSize == 3) {
+            uint256[3] memory amounts;
+            amounts[uint256(curveId)] = _wantToInvest;
+            if (hasUnderlying) {
+                curvePool.add_liquidity(amounts, maxSlip, true);
+            } else {
+                curvePool.add_liquidity(amounts, maxSlip);
+            }
+
+        } else{
+            uint256[4] memory amounts;
+            amounts[uint256(curveId)] = _wantToInvest;
+            if(hasUnderlying){
+                curvePool.add_liquidity(amounts, maxSlip, true);
+            }else{
+                curvePool.add_liquidity(amounts, maxSlip);
+            }
+
+        }
+
+        //now add to yearn
+        yvToken.deposit();
+        lastInvest = block.timestamp;
     }
 
     function liquidatePosition(uint256 _amountNeeded)
         internal
         override
-        returns (uint256 _liquidatedAmount, uint256 _loss)
-    {
+        returns (uint256 _liquidatedAmount, uint256 _loss) {
 
         uint256 wantBal = want.balanceOf(address(this));
         if(wantBal < _amountNeeded){
@@ -493,7 +469,7 @@ contract Strategy is BaseStrategy {
                 curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
             }
 
-            if (isWantEth()) {
+            if (isWantWETH()) {
                 weth.deposit{value: address(this).balance}();
             }
         }
@@ -512,7 +488,7 @@ contract Strategy is BaseStrategy {
     function prepareMigration(address _newStrategy) internal override {
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
 
-        if (isWantEth()) {
+        if (isWantWETH()) {
             uint256 ethBalance = address(this).balance;
             if (ethBalance > 0) {
                 weth.deposit{value: ethBalance}();
@@ -520,25 +496,11 @@ contract Strategy is BaseStrategy {
         }
     }
 
-    // Override this to add all tokens/tokenized positions this contract manages
-    // on a *persistent* basis (e.g. not just for swapping back to want ephemerally)
-    // NOTE: Do *not* include `want`, already included in `sweep` below
-    //
-    // Example:
-    //
-    //    function protectedTokens() internal override view returns (address[] memory) {
-    //      address[] memory protected = new address[](3);
-    //      protected[0] = tokenA;
-    //      protected[1] = tokenB;
-    //      protected[2] = tokenC;
-    //      return protected;
-    //    }
     function protectedTokens()
         internal
         override
         view
-        returns (address[] memory)
-    {
+        returns (address[] memory) {
 
         address[] memory protected = new address[](1);
           protected[0] = address(yvToken);
