@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import "./interfaces/curve/Curve.sol";
 import "./interfaces/curve/ICrvV3.sol";
 import "./interfaces/erc20/IERC20Extended.sol";
+import "./interfaces/IWETH.sol";
 
 // These are the core Yearn libraries
 import "@yearnvaults/contracts/BaseStrategy.sol";
@@ -20,27 +21,20 @@ interface IUni {
     function getAmountsOut(uint256 amountIn, address[] calldata path) external view returns (uint256[] memory amounts);
 }
 
-
-
-// Import interfaces for many popular DeFi projects, or add your own!
-//import "../interfaces/<protocol>/<Interface>.sol";
-
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
 
-    ICurveFi public curvePool;// =  ICurveFi(address(0x4CA9b3063Ec5866A4B82E437059D2C43d1be596F));
+    ICurveFi public curvePool;
     ICurveFi public basePool;
-    ICrvV3 public curveToken;// = ICrvV3(address(0xb19059ebb43466C323583928285a49f558E572Fd));
+    ICrvV3 public curveToken;
 
-    address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address public constant uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    IWETH public constant weth = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address public constant uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
 
-    VaultAPI public yvToken;// = IVaultV1(address(0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5));
-    //IERC20Extended public middleToken; // the token between bluechip and curve pool
-
-    uint256 public lastInvest = 0;
+    VaultAPI public yvToken;
+    uint256 public lastInvest; // default is 0
     uint256 public minTimePerInvest;// = 3600;
     uint256 public maxSingleInvest;// // 2 hbtc per hour default
     uint256 public slippageProtectionIn;// = 50; //out of 10000. 50 = 0.5%
@@ -55,7 +49,6 @@ contract Strategy is BaseStrategy {
     uint256 public poolSize;
     bool public hasUnderlying;
     address public metaToken;
-
     bool public withdrawProtection;
 
     constructor(
@@ -107,14 +100,13 @@ contract Strategy is BaseStrategy {
     ) internal {
         require(want_decimals == 0, "Already Initialized");
         require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
-        
-        
+
         curvePool = ICurveFi(_curvePool);
 
         if(_metaToken != address(0)){
             basePool = ICurveFi(curvePool.pool());
             metaToken = _metaToken;
-            
+
             for(uint i = 0; i < _poolSize; i++){
                 if( i == 0){
                     if(curvePool.coins(0) == address(want)){
@@ -130,8 +122,12 @@ contract Strategy is BaseStrategy {
                     require(false, "incorrect want for curve pool");
                 }
             }
-
-        }else{
+        } else if (isWantEth()) {
+            // Case where our want is ETH
+            basePool = ICurveFi(_curvePool);
+            require(curvePool.coins(0) == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE));
+            curveId = 0;
+        } else {
             basePool = ICurveFi(_curvePool);
             if(curvePool.coins(0) == address(want) || (_hasUnderlying && curvePool.underlying_coins(0) == address(want) )){
                 curveId =0;
@@ -161,7 +157,7 @@ contract Strategy is BaseStrategy {
         curveToken = ICrvV3(_curveToken);
 
         _setupStatics();
-        
+
     }
     function _setupStatics() internal {
         maxReportDelay = 86400;
@@ -171,14 +167,17 @@ contract Strategy is BaseStrategy {
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
 
-        want.safeApprove(address(curvePool), uint256(-1));
+        if (!isWantEth()) {
+            want.safeApprove(address(curvePool), type(uint256).max);
+        }
 
         //deposit contract needs permissions
         if(metaToken != address(0)){
-            IERC20(metaToken).safeApprove(address(curvePool), uint256(-1)); // 3crv    
-            curveToken.approve(address(curvePool), uint256(-1));
+            IERC20(metaToken).safeApprove(address(curvePool), type(uint256).max);
+            curveToken.approve(address(curvePool), type(uint256).max);
         }
-        curveToken.approve(address(yvToken), uint256(-1));
+
+        curveToken.approve(address(yvToken), type(uint256).max);
     }
 
     event Cloned(address indexed clone);
@@ -195,7 +194,7 @@ contract Strategy is BaseStrategy {
         address _metaToken,
         bool _hasUnderlying,
         string memory _strategyName
-    ) external returns (address newStrategy){
+    ) external returns (address payable newStrategy) {
          bytes20 addressBytes = bytes20(address(this));
 
         assembly {
@@ -213,6 +212,9 @@ contract Strategy is BaseStrategy {
 
     }
 
+    function isWantEth() internal view returns (bool) {
+        return address(want) == address(weth);
+    }
 
     function name() external override view returns (string memory) {
         return strategyName;
@@ -221,14 +223,21 @@ contract Strategy is BaseStrategy {
     function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyAuthorized {
         minTimePerInvest = _minTimePerInvest;
     }
+
     function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyAuthorized {
         maxSingleInvest = _maxSingleInvest;
     }
+
     function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyAuthorized {
         slippageProtectionIn = _slippageProtectionIn;
     }
+
     function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyAuthorized {
         slippageProtectionOut = _slippageProtectionOut;
+    }
+
+    function updateWithdrawProtection(bool _withdrawProtection) public onlyAuthorized {
+        withdrawProtection = _withdrawProtection;
     }
 
     function delegatedAssets() public override view returns (uint256) {
@@ -245,10 +254,8 @@ contract Strategy is BaseStrategy {
         if(tokens == 0){
             return 0;
         }
-    
-        uint256 virtualOut = virtualPriceToWant().mul(tokens).div(1e18);
 
-        return virtualOut;
+        return virtualPriceToWant().mul(tokens).div(1e18);
     }
 
     //we lose some precision here. but it shouldnt matter as we are underestimating
@@ -304,8 +311,7 @@ contract Strategy is BaseStrategy {
         uint256 currentValue = estimatedTotalAssets();
         uint256 wantBalance = want.balanceOf(address(this));
 
-
-        if(debt < currentValue){
+        if(debt < currentValue) {
             //profit
             _profit = currentValue.sub(debt);
         }else{
@@ -314,11 +320,10 @@ contract Strategy is BaseStrategy {
 
         uint256 toFree = _debtPayment.add(_profit);
 
-        if(toFree > wantBalance){
+        if(toFree > wantBalance) {
             toFree = toFree.sub(wantBalance);
 
             (, uint256 withdrawalLoss) = withdrawSome(toFree);
-
             //when we withdraw we can lose money in the withdrawal
             if(withdrawalLoss < _profit){
                 _profit = _profit.sub(withdrawalLoss);
@@ -337,16 +342,6 @@ contract Strategy is BaseStrategy {
                 _debtPayment = wantBalance.sub(_profit);
             }
         }
-
-        /*if(doHealthCheck && debt > 0){
-            //set to 10_000 to let any profit through
-            if(profitLimitRatio < DENOMINATOR){
-                require(_profit < debt.mul(profitLimitRatio).div(DENOMINATOR), "PROFIT TOO HIGH");
-            }
-            require(_loss < debt.mul(lossLimitRatio).div(DENOMINATOR), "LOSS TOO HIGH");
-
-        }*/
-        
     }
 
     function liquidateAllPositions() internal override returns (uint256 _amountFreed) {
@@ -356,7 +351,7 @@ contract Strategy is BaseStrategy {
 
     function ethToWant(uint256 _amount) public override view returns (uint256) {
         address[] memory path = new address[](2);
-        path[0] = weth;
+        path[0] = address(weth);
         path[1] = address(want);
 
         uint256[] memory amounts = IUni(uniswapRouter).getAmountsOut(_amount, path);
@@ -364,20 +359,9 @@ contract Strategy is BaseStrategy {
         return amounts[amounts.length - 1];
     }
 
-    function tendTrigger(uint256 callCost) public override view returns (bool) {
-
-        uint256 wantBal = want.balanceOf(address(this));
-        uint256 _wantToInvest = Math.min(wantBal, maxSingleInvest);
-
-        if(lastInvest.add(minTimePerInvest) < block.timestamp &&  _wantToInvest > 1 && _checkSlip(_wantToInvest)){
-            //return true;
-        }
-    }
-
     function _checkSlip(uint256 _wantToInvest) public view returns (bool){
         return true;
     }
-
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
 
@@ -393,37 +377,47 @@ contract Strategy is BaseStrategy {
             if(_checkSlip(_wantToInvest)){
 
                 uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
-        
+
                 uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
 
                 //pool size cannot be more than 4 or less than 2
-                if(poolSize == 2){
-                    uint256[2] memory amounts; 
+                if(isWantEth()) {
+                  weth.withdraw(_wantToInvest);
+                  uint256[2] memory amounts;
+                  amounts[uint256(curveId)] = _wantToInvest;
+                  if(hasUnderlying) {
+                      curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip, true);
+                  } else {
+                      curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip);
+                  }
+
+                } else if (poolSize == 2){
+                    uint256[2] memory amounts;
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
                         curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
                         curvePool.add_liquidity(amounts, maxSlip);
                     }
-   
+
                 }else if (poolSize == 3){
-                    uint256[3] memory amounts; 
+                    uint256[3] memory amounts;
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
                         curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
                         curvePool.add_liquidity(amounts, maxSlip);
                     }
-                    
+
                 }else{
-                    uint256[4] memory amounts; 
+                    uint256[4] memory amounts;
                     amounts[uint256(curveId)] = _wantToInvest;
                     if(hasUnderlying){
                         curvePool.add_liquidity(amounts, maxSlip, true);
                     }else{
                         curvePool.add_liquidity(amounts, maxSlip);
                     }
-                    
+
                 }
                 //now add to yearn
                 yvToken.deposit();
@@ -455,7 +449,7 @@ contract Strategy is BaseStrategy {
 
         uint256 wantBalanceBefore = want.balanceOf(address(this));
 
-        //let's take the amount we need if virtual price is real. Let's add the 
+        //let's take the amount we need if virtual price is real. Let's add the
         uint256 virtualPrice = virtualPriceToWant();
         uint256 amountWeNeedFromVirtualPrice = _amount.mul(1e18).div(virtualPrice);
 
@@ -464,10 +458,9 @@ contract Strategy is BaseStrategy {
         uint256 pricePerFullShare = yvToken.pricePerShare();
         uint256 amountFromVault = amountWeNeedFromVirtualPrice.mul(1e18).div(pricePerFullShare);
 
-        uint256 yBalance =  yvToken.balanceOf(address(this));
-        
+        uint256 yBalance = yvToken.balanceOf(address(this));
 
-        if(amountFromVault > yBalance){
+        if(amountFromVault > yBalance) {
 
             amountFromVault = yBalance;
             //this is not loss. so we amend amount
@@ -476,26 +469,34 @@ contract Strategy is BaseStrategy {
             _amount = _amountOfCrv.mul(virtualPrice).div(1e18);
         }
 
-        yvToken.withdraw(amountFromVault);
-        if(withdrawProtection){
+        if (amountFromVault > 0) {
+            yvToken.withdraw(amountFromVault);
+        }
+
+        if (withdrawProtection) {
             //this tests that we liquidated all of the expected ytokens. Without it if we get back less then will mark it is loss
             require(yBalance.sub(yvToken.balanceOf(address(this))) >= amountFromVault.sub(1), "YVAULTWITHDRAWFAILED");
         }
 
         uint256 toWithdraw = curveToken.balanceOf(address(this)).sub(crvBeforeBalance);
 
-        //if we have less than 18 decimals we need to lower the amount out
-        uint256 maxSlippage = toWithdraw.mul(DENOMINATOR.sub(slippageProtectionOut)).div(DENOMINATOR);
-        if(want_decimals < 18){
-            maxSlippage = maxSlippage.div(10 ** (uint256(uint8(18) - want_decimals)));
-        }
+        if (toWithdraw > 0) {
+            //if we have less than 18 decimals we need to lower the amount out
+            uint256 maxSlippage = toWithdraw.mul(DENOMINATOR.sub(slippageProtectionOut)).div(DENOMINATOR);
+            if(want_decimals < 18){
+                maxSlippage = maxSlippage.div(10 ** (uint256(uint8(18) - want_decimals)));
+            }
 
-        if(hasUnderlying){
-            curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage, true);
-        }else{
-            curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
+            if(hasUnderlying) {
+                curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage, true);
+            } else {
+                curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
+            }
+
+            if (isWantEth()) {
+                weth.deposit{value: address(this).balance}();
+            }
         }
-        
 
         uint256 diff = want.balanceOf(address(this)).sub(wantBalanceBefore);
 
@@ -508,10 +509,15 @@ contract Strategy is BaseStrategy {
 
     }
 
-    // NOTE: Can override `tendTrigger` and `harvestTrigger` if necessary
-
     function prepareMigration(address _newStrategy) internal override {
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
+
+        if (isWantEth()) {
+            uint256 ethBalance = address(this).balance;
+            if (ethBalance > 0) {
+                weth.deposit{value: ethBalance}();
+            }
+        }
     }
 
     // Override this to add all tokens/tokenized positions this contract manages
@@ -536,7 +542,9 @@ contract Strategy is BaseStrategy {
 
         address[] memory protected = new address[](1);
           protected[0] = address(yvToken);
-    
+
           return protected;
     }
+
+    receive() external payable {}
 }
