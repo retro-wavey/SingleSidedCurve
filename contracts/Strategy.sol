@@ -384,7 +384,7 @@ contract Strategy is BaseStrategy {
                 if(isWantEth()) {
                   weth.withdraw(_wantToInvest);
                   uint256[2] memory amounts;
-                  amounts[uint256(curveId)] = _wantToInvest;
+                  amounts[0] = _wantToInvest;
                   if(hasUnderlying) {
                       curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip, true);
                   } else {
