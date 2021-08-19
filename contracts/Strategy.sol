@@ -447,11 +447,10 @@ contract Strategy is BaseStrategy {
 
         if (amountFromVault > 0) {
             yvToken.withdraw(amountFromVault);
-        }
-
-        if (withdrawProtection) {
-            //this tests that we liquidated all of the expected ytokens. Without it if we get back less then will mark it is loss
-            require(yBalance.sub(yvToken.balanceOf(address(this))) >= amountFromVault.sub(1), "YVAULTWITHDRAWFAILED");
+            if (withdrawProtection) {
+                //this tests that we liquidated all of the expected ytokens. Without it if we get back less then will mark it is loss
+                require(yBalance.sub(yvToken.balanceOf(address(this))) >= amountFromVault.sub(1), "YVAULTWITHDRAWFAILED");
+            }
         }
 
         uint256 toWithdraw = curveToken.balanceOf(address(this)).sub(crvBeforeBalance);
