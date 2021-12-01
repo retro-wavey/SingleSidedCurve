@@ -25,12 +25,13 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
-    ICurveFi public curvePool;
     ICurveFi public basePool;
+    ICurveFi public depositContract;
     ICrvV3 public curveToken;
 
     IWETH public constant weth = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address public constant uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address private constant threeCrv = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 
     VaultAPI public yvToken;
     uint256 public lastInvest; // default is 0
@@ -42,11 +43,8 @@ contract Strategy is BaseStrategy {
     string internal strategyName;
 
     uint8 private want_decimals;
-    uint8 private middle_decimals;
 
     int128 public curveId;
-    uint256 public poolSize;
-    bool public hasUnderlying;
     address public metaToken;
     bool public withdrawProtection;
 
@@ -55,15 +53,12 @@ contract Strategy is BaseStrategy {
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
-        address _curvePool,
-        address _curveToken,
+        address _basePool,
+        address _depositContract,
         address _yvToken,
-        uint256 _poolSize,
-        address _metaToken,
-        bool _hasUnderlying,
         string memory _strategyName
     ) public BaseStrategy(_vault) {
-         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying, _strategyName);
+         _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _basePool, _depositContract, _yvToken, _strategyName);
     }
 
     function initialize(
@@ -72,91 +67,52 @@ contract Strategy is BaseStrategy {
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
-        address _curvePool,
-        address _curveToken,
+        address _basePool,
+        address _depositContract,
         address _yvToken,
-        uint256 _poolSize,
-        address _metaToken,
-        bool _hasUnderlying,
         string memory _strategyName
     ) external {
         //note: initialise can only be called once. in _initialize in BaseStrategy we have: require(address(want) == address(0), "Strategy already initialized");
         _initialize(_vault, _strategist, _strategist, _strategist);
-        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying, _strategyName);
+        _initializeStrat(_maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _basePool, _depositContract, _yvToken, _strategyName);
     }
 
     function _initializeStrat(
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
-        address _curvePool,
-        address _curveToken,
+        address _basePool,
+        address _depositContract,
         address _yvToken,
-        uint256 _poolSize,
-        address _metaToken,
-        bool _hasUnderlying,
         string memory _strategyName
     ) internal {
         require(want_decimals == 0, "Already Initialized");
-        require(_poolSize > 1 && _poolSize < 5, "incorrect pool size");
-
-        curvePool = ICurveFi(_curvePool);
-
-        if(_metaToken != address(0)){
-            basePool = ICurveFi(curvePool.pool());
-            metaToken = _metaToken;
-
-            for(uint i = 0; i < _poolSize; i++){
-                if( i == 0){
-                    if(curvePool.coins(0) == address(want)){
-                        require(false, "ONLY USE META FOR BASE");
-                    }
-                }else{
-                    if(curvePool.base_coins(i-1) == address(want)){
-                        curveId = int128(i);
-                        break;
-                    }
-                }
-                if(i == _poolSize - 1){ // doesnt matter if it overflows
-                    require(false, "incorrect want for curve pool");
-                }
-            }
-        } else if (isWantWETH()) {
-            // Case where our want is ETH
-            basePool = ICurveFi(_curvePool);
-            require(curvePool.coins(0) == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE));
-            curveId = 0;
-        } else {
-            basePool = ICurveFi(_curvePool);
-            if(curvePool.coins(0) == address(want) || (_hasUnderlying && curvePool.underlying_coins(0) == address(want) )){
-                curveId =0;
-            }else if ( curvePool.coins(1) == address(want) || (_hasUnderlying && curvePool.underlying_coins(1) == address(want) )){
-                curveId =1;
-            }else if ( curvePool.coins(2) == address(want) || (_hasUnderlying && curvePool.underlying_coins(2) == address(want) )){
-                curveId =2;
-            }else if ( curvePool.coins(3) == address(want) || (_hasUnderlying && curvePool.underlying_coins(3) == address(want) )){
-                //will revert if there are not enough coins
-            curveId =3;
-            }else{
-                require(false, "incorrect want for curve pool");
-            }
-
-        }
+        depositContract = ICurveFi(_depositContract);
+        basePool = ICurveFi(_basePool);
+        require(basePool.coins(1) == threeCrv);
+        curveId = _findCurveId();
 
         maxSingleInvest = _maxSingleInvest;
         minTimePerInvest = _minTimePerInvest;
         slippageProtectionIn = _slippageProtectionIn;
         slippageProtectionOut = _slippageProtectionIn; // use In to start with to save on stack
-        poolSize = _poolSize;
-        hasUnderlying = _hasUnderlying;
         strategyName = _strategyName;
 
-
         yvToken = VaultAPI(_yvToken);
-        curveToken = ICrvV3(_curveToken);
+        curveToken = ICrvV3(_basePool);
 
         _setupStatics();
 
+    }
+    function _findCurveId() internal returns(int128){
+        address dai = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+        address usdc = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+        address usdt = address(0xdAC17F958D2ee523a2206206994597C13D831ec7);
+        if(address(want) == dai) return 1;
+        if(address(want) == usdc) return 2;
+        if(address(want) == usdt) return 3;
+        if(address(want) == basePool.coins(0)) return 0;
+        revert();
     }
     function _setupStatics() internal {
         maxReportDelay = 86400;
@@ -166,17 +122,8 @@ contract Strategy is BaseStrategy {
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
 
-        if (!isWantWETH()) {
-            want.safeApprove(address(curvePool), type(uint256).max);
-        }
-
-        //deposit contract needs permissions
-        if(metaToken != address(0)){
-            IERC20(metaToken).safeApprove(address(curvePool), type(uint256).max);
-            curveToken.approve(address(curvePool), type(uint256).max);
-        }
-
         curveToken.approve(address(yvToken), type(uint256).max);
+        want.approve(address(depositContract), type(uint256).max);
     }
 
     event Cloned(address indexed clone);
@@ -186,12 +133,9 @@ contract Strategy is BaseStrategy {
         uint256 _maxSingleInvest,
         uint256 _minTimePerInvest,
         uint256 _slippageProtectionIn,
-        address _curvePool,
-        address _curveToken,
+        address _basePool,
+        address _depositContract,
         address _yvToken,
-        uint256 _poolSize,
-        address _metaToken,
-        bool _hasUnderlying,
         string memory _strategyName
     ) external returns (address payable newStrategy) {
          bytes20 addressBytes = bytes20(address(this));
@@ -205,14 +149,10 @@ contract Strategy is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _curvePool, _curveToken, _yvToken, _poolSize, _metaToken, _hasUnderlying, _strategyName);
+        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _basePool, _depositContract, _yvToken, _strategyName);
 
         emit Cloned(newStrategy);
 
-    }
-
-    function isWantWETH() internal view returns (bool) {
-        return address(want) == address(weth);
     }
 
     function name() external override view returns (string memory) {
@@ -361,45 +301,9 @@ contract Strategy is BaseStrategy {
         uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
         uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
 
-        //pool size cannot be more than 4 or less than 2
-        if (isWantWETH()) {
-          weth.withdraw(_wantToInvest);
-          uint256[2] memory amounts;
-          amounts[0] = _wantToInvest;
-          if (hasUnderlying) {
-              curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip, true);
-          } else {
-              curvePool.add_liquidity{value: _wantToInvest}(amounts, maxSlip);
-          }
-
-        } else if (poolSize == 2) {
-            uint256[2] memory amounts;
-            amounts[uint256(curveId)] = _wantToInvest;
-            if(hasUnderlying) {
-                curvePool.add_liquidity(amounts, maxSlip, true);
-            } else {
-                curvePool.add_liquidity(amounts, maxSlip);
-            }
-
-        } else if (poolSize == 3) {
-            uint256[3] memory amounts;
-            amounts[uint256(curveId)] = _wantToInvest;
-            if (hasUnderlying) {
-                curvePool.add_liquidity(amounts, maxSlip, true);
-            } else {
-                curvePool.add_liquidity(amounts, maxSlip);
-            }
-
-        } else{
-            uint256[4] memory amounts;
-            amounts[uint256(curveId)] = _wantToInvest;
-            if(hasUnderlying){
-                curvePool.add_liquidity(amounts, maxSlip, true);
-            }else{
-                curvePool.add_liquidity(amounts, maxSlip);
-            }
-
-        }
+        uint256[4] memory amounts;
+        amounts[uint256(curveId)] = _wantToInvest;
+        depositContract.add_liquidity(address(basePool), amounts, maxSlip);
 
         //now add to yearn
         yvToken.deposit();
@@ -462,15 +366,7 @@ contract Strategy is BaseStrategy {
                 maxSlippage = maxSlippage.div(10 ** (uint256(uint8(18) - want_decimals)));
             }
 
-            if(hasUnderlying) {
-                curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage, true);
-            } else {
-                curvePool.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
-            }
-
-            if (isWantWETH()) {
-                weth.deposit{value: address(this).balance}();
-            }
+            depositContract.remove_liquidity_one_coin(address(basePool), toWithdraw, curveId, maxSlippage);
         }
 
         uint256 diff = want.balanceOf(address(this)).sub(wantBalanceBefore);
@@ -486,13 +382,6 @@ contract Strategy is BaseStrategy {
 
     function prepareMigration(address _newStrategy) internal override {
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
-
-        if (isWantWETH()) {
-            uint256 ethBalance = address(this).balance;
-            if (ethBalance > 0) {
-                weth.deposit{value: ethBalance}();
-            }
-        }
     }
 
     function protectedTokens()

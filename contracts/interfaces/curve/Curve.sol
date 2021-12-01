@@ -7,6 +7,24 @@ interface ICurveFi {
     function base_virtual_price() external view returns (uint256);
 
     function add_liquidity(
+        address pool,
+        uint256[2] calldata amounts,
+        uint256 min_mint_amount
+    ) external;
+
+    function add_liquidity(
+        address pool,
+        uint256[3] calldata amounts,
+        uint256 min_mint_amount
+    ) external;
+
+    function add_liquidity(
+        address pool,
+        uint256[4] calldata amounts,
+        uint256 min_mint_amount
+    ) external;
+
+    function add_liquidity(
         // sBTC pool
         uint256[3] calldata amounts,
         uint256 min_mint_amount
@@ -59,6 +77,13 @@ interface ICurveFi {
     function calc_withdraw_one_coin(uint256 _amount, int128 i, bool use_underlying) external view returns (uint256);
 
     function remove_liquidity_one_coin(
+        address pool,
+        uint256 _token_amount,
+        int128 i,
+        uint256 min_amount
+    ) external;
+
+    function remove_liquidity_one_coin(
         uint256 _token_amount,
         int128 i,
         uint256 min_amount
@@ -79,6 +104,7 @@ interface ICurveFi {
     ) external payable;
 
     function balances(int128) external view returns (uint256);
+    function balances(uint256) external view returns (uint256);
 
     function get_dy(
         int128 from,
