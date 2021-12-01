@@ -41,7 +41,6 @@ contract Strategy is BaseStrategy {
     uint256 public slippageProtectionOut;// = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10_000;
     string internal strategyName;
-
     uint8 private want_decimals;
 
     int128 public curveId;
@@ -91,6 +90,9 @@ contract Strategy is BaseStrategy {
         basePool = ICurveFi(_basePool);
         require(basePool.coins(1) == threeCrv);
         curveId = _findCurveId();
+        if(curveId == 0){
+            depositContract = basePool;
+        }
 
         maxSingleInvest = _maxSingleInvest;
         minTimePerInvest = _minTimePerInvest;
@@ -138,7 +140,7 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         string memory _strategyName
     ) external returns (address payable newStrategy) {
-         bytes20 addressBytes = bytes20(address(this));
+        bytes20 addressBytes = bytes20(address(this));
 
         assembly {
             // EIP-1167 bytecode
@@ -303,9 +305,14 @@ contract Strategy is BaseStrategy {
 
         uint256[4] memory amounts;
         amounts[uint256(curveId)] = _wantToInvest;
-        depositContract.add_liquidity(address(basePool), amounts, maxSlip);
-
-        //now add to yearn
+        if(curveId == 0){
+            depositContract.add_liquidity(amounts, maxSlip);
+        }
+        else{
+            depositContract.add_liquidity(address(basePool), amounts, maxSlip);
+        }
+        
+        // deposit to yearn vault
         yvToken.deposit();
         lastInvest = block.timestamp;
     }
@@ -365,8 +372,12 @@ contract Strategy is BaseStrategy {
             if(want_decimals < 18){
                 maxSlippage = maxSlippage.div(10 ** (uint256(uint8(18) - want_decimals)));
             }
-
-            depositContract.remove_liquidity_one_coin(address(basePool), toWithdraw, curveId, maxSlippage);
+            if(curveId == 0){
+                depositContract.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
+            }
+            else{
+                depositContract.remove_liquidity_one_coin(address(basePool), toWithdraw, curveId, maxSlippage);
+            }
         }
 
         uint256 diff = want.balanceOf(address(this)).sub(wantBalanceBefore);
