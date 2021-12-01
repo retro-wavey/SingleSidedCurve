@@ -190,8 +190,8 @@ contract Strategy is BaseStrategy {
         address _curveToken,
         address _yvToken,
         uint256 _poolSize,
-        address _metaToken,
-        bool _hasUnderlying,
+        address _metaToken,     // If pool tokens include another Curve LP, use that address. If not, use zero address.
+        bool _hasUnderlying,    // If True, deposit underlying assets (e.g. DAI/USDC/USDT) instead of wrapped token (e.g. cyTokens)
         string memory _strategyName
     ) external returns (address payable newStrategy) {
          bytes20 addressBytes = bytes20(address(this));
