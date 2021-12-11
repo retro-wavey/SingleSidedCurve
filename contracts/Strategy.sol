@@ -25,8 +25,6 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
-    event Debug(uint256 where);
-
     ICurveFi public basePool;
     ICurveFi public depositContract;
     ICrvV3 public curveToken;
@@ -90,15 +88,10 @@ contract Strategy is BaseStrategy {
         string memory _strategyName
     ) internal {
         require(want_decimals == 0, "Already Initialized");
-        emit Debug(1);
         depositContract = ICurveFi(_depositContract);
-        emit Debug(2);
         basePool = ICurveFi(_basePool);
-        emit Debug(3);
         require(basePool.coins(1) == threeCrv);
-        emit Debug(4);
         curveId = _findCurveId();
-        emit Debug(5);
         if(curveId == 0){
             depositContract = basePool;
         }
