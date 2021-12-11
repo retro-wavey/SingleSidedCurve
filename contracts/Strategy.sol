@@ -107,20 +107,17 @@ contract Strategy is BaseStrategy {
 
     }
     function _findCurveId() internal returns(int128){
-        address dai = address(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-        address usdc = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-        address usdt = address(0xdAC17F958D2ee523a2206206994597C13D831ec7);
-        if(address(want) == dai) return 1;
-        if(address(want) == usdc) return 2;
-        if(address(want) == usdt) return 3;
         if(address(want) == basePool.coins(0)) return 0;
+        if(address(want) == basePool.coins(1)) return 1;
+        if(address(want) == basePool.coins(2)) return 2;
+        if(address(want) == basePool.coins(3)) return 3;
         revert();
     }
     function _setupStatics() internal {
         maxReportDelay = 86400;
-        profitFactor = 1500;
+        profitFactor = 1e22;
         minReportDelay = 3600;
-        debtThreshold = 100*1e18;
+        debtThreshold = 1e30;
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
 
@@ -303,12 +300,15 @@ contract Strategy is BaseStrategy {
         uint256 expectedOut = _wantToInvest.mul(1e18).div(virtualPriceToWant());
         uint256 maxSlip = expectedOut.mul(DENOMINATOR.sub(slippageProtectionIn)).div(DENOMINATOR);
 
-        uint256[4] memory amounts;
-        amounts[uint256(curveId)] = _wantToInvest;
+        
         if(curveId == 0){
-            depositContract.add_liquidity(amounts, maxSlip);
+            uint256[2] memory amounts;
+            amounts[uint256(curveId)] = _wantToInvest;
+            basePool.add_liquidity(amounts, maxSlip);
         }
         else{
+            uint256[4] memory amounts;
+            amounts[uint256(curveId)] = _wantToInvest;
             depositContract.add_liquidity(address(basePool), amounts, maxSlip);
         }
         

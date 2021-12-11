@@ -24,6 +24,10 @@ def wbtc(interface):
     yield interface.ERC20('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
 
 @pytest.fixture
+def frax(interface):
+    yield interface.ERC20('0x853d955aCEf822Db058eb8505911ED77F175b99e')
+
+@pytest.fixture
 def tusd(interface):
     yield interface.ERC20('0x0000000000085d4780B73119b644AE5ecd22b376')
 
@@ -47,13 +51,13 @@ def usdt(interface):
 
 
 @pytest.fixture
-def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc):
+def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax):
     network.gas_price("0 gwei")
     network.gas_limit(6700000)
 
     daiAcc = accounts.at("0xb0Fa2BeEe3Cf36a7Ac7E99B885b48538Ab364853", force=True)
     usdcAcc = accounts.at("0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503", force=True)
-    
+    fraxAcc = accounts.at("0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B", force=True)
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
@@ -70,10 +74,12 @@ def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc):
     usdc.transfer(acc, usdc.balanceOf(usdcAcc),  {'from': usdcAcc})
     dai.transfer(acc, dai.balanceOf(daiAcc),  {'from': daiAcc})
     dai.transfer(acc, hbtc.balanceOf(hbtcAcc),  {'from': hbtcAcc})
+    frax.transfer(acc, frax.balanceOf(fraxAcc),  {'from': fraxAcc})
     
     assert currency.balanceOf(acc)  > 0
     assert wbtc.balanceOf(acc)  > 0
     assert hbtc.balanceOf(acc)  > 0
+    assert frax.balanceOf(acc) > 0
     yield acc
 
 
@@ -147,6 +153,15 @@ def live_hbtc_vault(pm):
 @pytest.fixture
 def wbtc_vault(pm, gov, rewards, guardian, wbtc):
     currency = wbtc
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
+@pytest.fixture
+def frax_vault(pm, gov, rewards, guardian, frax):
+    currency = frax
     Vault = pm(config["dependencies"][0]).Vault
     vault = gov.deploy(Vault)
     vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
@@ -393,11 +408,15 @@ def live_usdt_vault(pm):
     yield vault
 
 @pytest.fixture
+def strategy_frax(strategist,Strategy, frax_vault, fraxCurvePool, depositFrax, fraxyvault):
+    strategy = strategist.deploy(Strategy, frax_vault, 500_000*1e6, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
+    yield strategy
+
+@pytest.fixture
 def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy_wbtc, ibCurvePool, ib3CRV, ibyvault):
     #strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
     tx = live_strategy_wbtc.cloneSingleSidedCurve(live_usdt_vault, strategist, strategist, strategist, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, "ssc ib3crv",{'from': strategist})
     yield Strategy.at(tx.return_value)
-
 
 @pytest.fixture
 def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault,healthcheck):
