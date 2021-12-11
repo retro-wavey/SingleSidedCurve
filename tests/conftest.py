@@ -454,11 +454,12 @@ def strategy_usdc_frax(strategist, depositFrax, interface, keeper, live_usdc_vau
     # ssc_seth = interface.IStrat043("0xc57A4D3FBEF85e675f6C3656498beEfe6F9DcB55")
     # depositUsdn, usdn3crv, usdnyvault,4, threecrv, False,  "ssc ib3crv")
     # strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePool, hCRV, yvaultv2,2, False, "ssc wbtc hbtc")
+    strategy = strategist.deploy(Strategy, live_usdc_vault, 500_000*1e6, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
     strategy = strategist.deploy(
         Strategy,
         live_usdc_vault, 
-        3_000_000*1e6, 3600, 50,
-        frax3CRV,       # curvePool
+        3_000_000*1e6, 3600, 500,
+        fraxCurvePool,  # curvePool
         depositFrax,    # we use deposit contract 
         fraxyvault,     # yvToken
         "ssc_udsc_frax")

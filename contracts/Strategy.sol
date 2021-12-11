@@ -25,6 +25,8 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
+    event Debug(uint256 where);
+
     ICurveFi public basePool;
     ICurveFi public depositContract;
     ICrvV3 public curveToken;
@@ -88,10 +90,15 @@ contract Strategy is BaseStrategy {
         string memory _strategyName
     ) internal {
         require(want_decimals == 0, "Already Initialized");
+        emit Debug(1);
         depositContract = ICurveFi(_depositContract);
+        emit Debug(2);
         basePool = ICurveFi(_basePool);
+        emit Debug(3);
         require(basePool.coins(1) == threeCrv);
+        emit Debug(4);
         curveId = _findCurveId();
+        emit Debug(5);
         if(curveId == 0){
             depositContract = basePool;
         }
@@ -101,17 +108,16 @@ contract Strategy is BaseStrategy {
         slippageProtectionIn = _slippageProtectionIn;
         slippageProtectionOut = _slippageProtectionIn; // use In to start with to save on stack
         strategyName = _strategyName;
-
         yvToken = VaultAPI(_yvToken);
         curveToken = ICrvV3(_basePool);
         _setupStatics();
 
     }
     function _findCurveId() internal returns(int128){
+        if(address(want) == address(0x6B175474E89094C44Da98b954EedeAC495271d0F)) return 1; // DAI
+        if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC
+        if(address(want) == address(0xdAC17F958D2ee523a2206206994597C13D831ec7)) return 3; // USDT
         if(address(want) == basePool.coins(0)) return 0;
-        if(address(want) == basePool.coins(1)) return 1;
-        if(address(want) == basePool.coins(2)) return 2;
-        if(address(want) == basePool.coins(3)) return 3;
         revert();
     }
     function _setupStatics() internal {
@@ -121,8 +127,7 @@ contract Strategy is BaseStrategy {
         debtThreshold = 1e30;
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
-        sscVersion = "v5/factory";
-
+        sscVersion = "v5 factory";
         curveToken.approve(address(yvToken), type(uint256).max);
         want.approve(address(depositContract), type(uint256).max);
     }
@@ -140,7 +145,7 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         string memory _strategyName
     ) external returns (address payable newStrategy) {
-        require(isOriginal, "Clone inception!");
+        // require(isOriginal, "Clone inception!");
         bytes20 addressBytes = bytes20(address(this));
 
         assembly {
