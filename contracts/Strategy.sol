@@ -41,7 +41,9 @@ contract Strategy is BaseStrategy {
     uint256 public slippageProtectionOut;// = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10_000;
     string internal strategyName;
+    string public sscVersion;
     uint8 private want_decimals;
+    bool public isOriginal = true;
 
     int128 public curveId;
     address public metaToken;
@@ -102,7 +104,6 @@ contract Strategy is BaseStrategy {
 
         yvToken = VaultAPI(_yvToken);
         curveToken = ICrvV3(_basePool);
-
         _setupStatics();
 
     }
@@ -120,12 +121,14 @@ contract Strategy is BaseStrategy {
         debtThreshold = 1e30;
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
+        sscVersion = "v5/factory";
 
         curveToken.approve(address(yvToken), type(uint256).max);
         want.approve(address(depositContract), type(uint256).max);
     }
 
     event Cloned(address indexed clone);
+
     function cloneSingleSidedCurve(
         address _vault,
         address _strategist,
@@ -137,6 +140,7 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         string memory _strategyName
     ) external returns (address payable newStrategy) {
+        require(isOriginal, "Clone inception!");
         bytes20 addressBytes = bytes20(address(this));
 
         assembly {
