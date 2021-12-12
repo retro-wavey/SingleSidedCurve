@@ -166,6 +166,8 @@ def frax_vault(pm, gov, rewards, guardian, frax):
     vault = gov.deploy(Vault)
     vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    # vault.setGovernance(g, {"from": gov})
+    # vault.acceptGovernance({"from": g})
     yield vault
 
 @pytest.fixture
@@ -315,7 +317,7 @@ def token(andre, Token):
 @pytest.fixture
 def gov(accounts):
     # yearn multis... I mean YFI governance. I swear!
-    yield accounts[1]
+    yield accounts.at('0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52', force=True)
 
 
 @pytest.fixture

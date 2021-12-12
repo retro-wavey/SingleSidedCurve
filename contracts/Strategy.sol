@@ -25,6 +25,8 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
+    event Debug(uint256 val);
+
     ICurveFi public basePool;
     ICurveFi public depositContract;
     ICrvV3 public curveToken;
@@ -120,9 +122,15 @@ contract Strategy is BaseStrategy {
         debtThreshold = 1e30;
         withdrawProtection = true;
         want_decimals = IERC20Extended(address(want)).decimals();
-        sscVersion = "v5 factory";
+        sscVersion = "v5 factory 3pool";
         curveToken.approve(address(yvToken), type(uint256).max);
-        want.approve(address(depositContract), type(uint256).max);
+        if(curveId==0){
+            want.approve(address(basePool), type(uint256).max);
+        }
+        else{
+            want.approve(address(depositContract), type(uint256).max);
+            curveToken.approve(address(depositContract), type(uint256).max);
+        }
     }
 
     event Cloned(address indexed clone);
@@ -374,8 +382,11 @@ contract Strategy is BaseStrategy {
             if(want_decimals < 18){
                 maxSlippage = maxSlippage.div(10 ** (uint256(uint8(18) - want_decimals)));
             }
+            emit Debug(maxSlippage);
+            emit Debug(toWithdraw);
+            emit Debug(curveToken.balanceOf(address(this)));
             if(curveId == 0){
-                depositContract.remove_liquidity_one_coin(toWithdraw, curveId, maxSlippage);
+                basePool.remove_liquidity_one_coin(toWithdraw, 0, maxSlippage);
             }
             else{
                 depositContract.remove_liquidity_one_coin(address(basePool), toWithdraw, curveId, maxSlippage);
