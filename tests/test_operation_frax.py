@@ -30,40 +30,44 @@ def test_frax_fresh_vault(frax, fraxCurvePool,Strategy,strategy_frax,fraxyvault,
     whalebefore = currency.balanceOf(whale)
     whale_deposit  = 100_000 * 10 ** currency.decimals()
     vault.deposit(whale_deposit, {"from": whale})
-    strategy.harvest({'from': strategist})
+    strategy.harvest({'from': strategist}) # Invest
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
-    chain.sleep(1000)
-    chain.mine(1)
-    strategy.harvest({'from': strategist})
 
     # Setup delegated CRV vault/strat vars
     convex_deposit = Contract("0xF403C135812408BFbE8713b5A23a04b3D48AAE31")
-    yvault = fraxyvault
     print("curveid: ", strategy.curveId())
     print("curve token: ", strategy.curveToken())
     print("ytoken: ", strategy.yvToken())
     delegatedStrat1 = Strategy.at(yvault.withdrawalQueue(0))
     delegatedStrat2 = Strategy.at(yvault.withdrawalQueue(1))
-    chain.sleep(2016000)
+    chain.sleep(60*60*24*10) # SLeep 10 days
     chain.mine(1)
+    convex_deposit.earmarkRewards(32, {"from": gov})
     tx = delegatedStrat1.harvest({"from": gov})
     tx = delegatedStrat2.harvest({"from": gov})
-    chain.sleep(2016000)
+    print(tx.events["Harvested"])
+    chain.sleep(60*60*6)
     chain.mine(1)
     
-    strategy.harvest({'from': strategist})
+    tx = strategy.harvest({'from': strategist})
+    print("***")
+    print(tx.events["Harvested"])
+    print("***")
     genericStateOfStrat(strategy, currency, vault)
     genericStateOfVault(vault, currency)
 
-    print("\nEstimated APR: ", "{:.2%}".format(((vault.totalAssets()-2*10 ** currency.decimals())*12)/(2*10 ** currency.decimals())))
+    print("\nEst APR: ", "{:.2%}".format(
+            ((vault.totalAssets() - whale_deposit) * 365/2) / (whale_deposit)
+        )
+    )
     chain.sleep(21600) # wait six hours so we get full harvest
     chain.mine(1)
 
     vault.updateStrategyDebtRatio(strategy, 0 , {"from": gov})
     tx = strategy.harvest({'from': strategist})
     vault.withdraw(vault.balanceOf(whale), whale, 100, {"from": whale})
-    vault.withdraw(vault.balanceOf(strategist), strategist, 100, {"from": strategist})
+    # vault.withdraw(vault.balanceOf(strategist), strategist, 100, {"from": strategist})
 
     #vault.withdraw(vault.balanceOf(rewards), rewards, 100, {"from": rewards})
 

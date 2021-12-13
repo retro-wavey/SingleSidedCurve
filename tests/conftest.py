@@ -411,7 +411,7 @@ def live_usdt_vault(pm):
 
 @pytest.fixture
 def strategy_frax(strategist,Strategy, frax_vault, fraxCurvePool, depositFrax, fraxyvault):
-    strategy = strategist.deploy(Strategy, frax_vault, 500_000*1e6, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
+    strategy = strategist.deploy(Strategy, frax_vault, 3_000_000*1e18, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
     yield strategy
 
 @pytest.fixture
