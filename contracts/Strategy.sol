@@ -25,8 +25,6 @@ contract Strategy is BaseStrategy {
     using Address for address;
     using SafeMath for uint256;
 
-    event Debug(uint256 val);
-
     ICurveFi public basePool;
     ICurveFi public depositContract;
     ICrvV3 public curveToken;
@@ -382,9 +380,6 @@ contract Strategy is BaseStrategy {
             if(want_decimals < 18){
                 maxSlippage = maxSlippage.div(10 ** (uint256(uint8(18) - want_decimals)));
             }
-            emit Debug(maxSlippage);
-            emit Debug(toWithdraw);
-            emit Debug(curveToken.balanceOf(address(this)));
             if(curveId == 0){
                 basePool.remove_liquidity_one_coin(toWithdraw, 0, maxSlippage);
             }

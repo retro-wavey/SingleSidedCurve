@@ -61,9 +61,10 @@ def test_frax_fresh_vault(frax, fraxCurvePool,Strategy,strategy_frax,fraxyvault,
             ((vault.totalAssets() - whale_deposit) * 365/2) / (whale_deposit)
         )
     )
-    chain.sleep(21600) # wait six hours so we get full harvest
+    chain.sleep(60*60*24*10) # wait six hours so we get full harvest
     chain.mine(1)
-
+    tx = delegatedStrat2.harvest({"from": gov})
+    chain.sleep(60*60*6)
     vault.updateStrategyDebtRatio(strategy, 0 , {"from": gov})
     tx = strategy.harvest({'from': strategist})
     vault.withdraw(vault.balanceOf(whale), whale, 100, {"from": whale})
@@ -77,3 +78,4 @@ def test_frax_fresh_vault(frax, fraxCurvePool,Strategy,strategy_frax,fraxyvault,
     balanceAfter = currency.balanceOf(whale)
     print("Whale profit: ", (currency.balanceOf(whale) - whalebefore)/10 ** currency.decimals())
     print("Whale profit %: ", "{:.2%}".format(((currency.balanceOf(whale) - whalebefore)/whale_deposit)*12))
+    assert False
