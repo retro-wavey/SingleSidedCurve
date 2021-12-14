@@ -3,7 +3,7 @@ from brownie import Wei, reverts, Contract
 import eth_abi
 from brownie.convert import to_bytes
 from useful_methods import genericStateOfStrat,genericStateOfVault
-import random
+import random, requests
 import brownie
 
 # TODO: Add tests here that show the normal operation of this strategy
@@ -13,9 +13,21 @@ import brownie
 #           - strategy operation at different loading levels (anticipated and "extreme")
 
 
+def make_tenderly_fork(block_number=None):
+    fork_base_url = "https://simulate.yearn.network/fork"
+    payload = {"network_id": "1"}
+    if block_number:
+        payload["block_number"] = block_number
+    resp = requests.post(fork_base_url, headers={}, json=payload)
+    fork_id = resp.json()["simulation_fork"]["id"]
+    fork_rpc_url = f"https://rpc.tenderly.co/fork/{fork_id}"
+    tenderly_provider = web3.HTTPProvider(fork_rpc_url, {"timeout": 600})
+    print("FORK ID", fork_id)
+    web3.provider = tenderly_provider
+    click.secho(f"https://dashboard.tenderly.co/yearn/yearn-web/fork/{fork_id}", fg='yellow')
 
 def test_frax_fresh_vault(frax, fraxCurvePool,Strategy,strategy_frax,fraxyvault,frax3CRV, rewards,chain,frax_vault, ychad, whale,gov,strategist, interface):
-
+    # make_tenderly_fork()
     vault = frax_vault
     yvault = fraxyvault
     strategy = strategy_frax
@@ -69,5 +81,3 @@ def test_frax_fresh_vault(frax, fraxCurvePool,Strategy,strategy_frax,fraxyvault,
     vault.updateStrategyDebtRatio(strategy, 0 , {"from": gov})
     tx = strategy.harvest({'from': strategist})
     vault.withdraw(vault.balanceOf(whale), whale, 100, {"from": whale})
-
-    assert False

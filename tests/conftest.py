@@ -61,7 +61,7 @@ def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax, mim):
 
     daiAcc = accounts.at("0xb0Fa2BeEe3Cf36a7Ac7E99B885b48538Ab364853", force=True)
     usdcAcc = accounts.at("0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503", force=True)
-    fraxAcc = accounts.at("0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B", force=True)
+    fraxAcc = accounts.at("0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf", force=True)
     mimAcc = accounts.at("0x9AEF7C447F6BC8D010B22afF52d5b67785ED942C", force=True)
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)

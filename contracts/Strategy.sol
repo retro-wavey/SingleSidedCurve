@@ -124,7 +124,6 @@ contract Strategy is BaseStrategy {
         curveToken.approve(address(yvToken), type(uint256).max);
         if(curveId==0){
             want.approve(address(basePool), type(uint256).max);
-            curveToken.approve(address(depositContract), type(uint256).max);
         }
         else{
             want.approve(address(depositContract), type(uint256).max);
