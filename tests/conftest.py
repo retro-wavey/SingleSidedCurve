@@ -28,6 +28,10 @@ def frax(interface):
     yield interface.ERC20('0x853d955aCEf822Db058eb8505911ED77F175b99e')
 
 @pytest.fixture
+def mim(interface):
+    yield interface.ERC20('0x99D8a9C45b2ecA8864373A26D1459e3Dff1e17F3')
+
+@pytest.fixture
 def tusd(interface):
     yield interface.ERC20('0x0000000000085d4780B73119b644AE5ecd22b376')
 
@@ -51,13 +55,14 @@ def usdt(interface):
 
 
 @pytest.fixture
-def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax):
+def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax, mim):
     network.gas_price("0 gwei")
     network.gas_limit(6700000)
 
     daiAcc = accounts.at("0xb0Fa2BeEe3Cf36a7Ac7E99B885b48538Ab364853", force=True)
     usdcAcc = accounts.at("0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503", force=True)
     fraxAcc = accounts.at("0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B", force=True)
+    mimAcc = accounts.at("0x9AEF7C447F6BC8D010B22afF52d5b67785ED942C", force=True)
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
@@ -75,11 +80,12 @@ def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax):
     dai.transfer(acc, dai.balanceOf(daiAcc),  {'from': daiAcc})
     dai.transfer(acc, hbtc.balanceOf(hbtcAcc),  {'from': hbtcAcc})
     frax.transfer(acc, frax.balanceOf(fraxAcc),  {'from': fraxAcc})
-    
+    mim.transfer(acc, mim.balanceOf(mimAcc),  {'from': mimAcc})
     assert currency.balanceOf(acc)  > 0
     assert wbtc.balanceOf(acc)  > 0
     assert hbtc.balanceOf(acc)  > 0
     assert frax.balanceOf(acc) > 0
+    assert mim.balanceOf(acc) > 0
     yield acc
 
 
@@ -117,6 +123,14 @@ def ibyvault(Vault):
 @pytest.fixture
 def fraxyvault(Vault):
     yield Vault.at('0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139')
+
+@pytest.fixture
+def mimyvault(Vault):
+    yield Vault.at('0x2DfB14E32e2F8156ec15a2c21c3A6c053af52Be8')
+
+@pytest.fixture
+def ustyvault(Vault):
+    yield Vault.at('0x2DfB14E32e2F8156ec15a2c21c3A6c053af52Be8')
 
 @pytest.fixture
 def usdnyvault(Vault):
@@ -168,6 +182,15 @@ def frax_vault(pm, gov, rewards, guardian, frax):
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     # vault.setGovernance(g, {"from": gov})
     # vault.acceptGovernance({"from": g})
+    yield vault
+
+@pytest.fixture
+def mim_vault(pm, gov, rewards, guardian, mim):
+    currency = mim
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
 @pytest.fixture
@@ -246,6 +269,9 @@ def depositUsdn(interface):
 def depositFrax(interface):
     yield interface.ICurveFi('0xA79828DF1850E8a3A3064576f380D90aECDD3359')
 @pytest.fixture
+def depositMim(interface):
+    yield interface.ICurveFi('0xA79828DF1850E8a3A3064576f380D90aECDD3359')
+@pytest.fixture
 def curvePoolObtc(interface):
     yield interface.ICurveFi('0xd5BCf53e2C81e1991570f33Fa881c49EEa570C8D')
 
@@ -268,10 +294,16 @@ def ibCurvePool(interface):
 @pytest.fixture
 def fraxCurvePool(interface):
     yield interface.ICurveFi('0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B')
+@pytest.fixture
+def mimCurvePool(interface):
+    yield interface.ICurveFi('0x5a6A4D54456819380173272A5E8E9B9904BdF41B')
 
 @pytest.fixture
 def frax3CRV(interface):
     yield interface.ICrvV3('0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B')
+@pytest.fixture
+def mim3CRV(interface):
+    yield interface.ICrvV3('0x5a6A4D54456819380173272A5E8E9B9904BdF41B')
 
 @pytest.fixture
 def ib3CRV(interface):
@@ -412,6 +444,11 @@ def live_usdt_vault(pm):
 @pytest.fixture
 def strategy_frax(strategist,Strategy, frax_vault, fraxCurvePool, depositFrax, fraxyvault):
     strategy = strategist.deploy(Strategy, frax_vault, 3_000_000*1e18, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
+    yield strategy
+
+@pytest.fixture
+def strategy_mim(strategist,Strategy, mim_vault, mimCurvePool, depositMim, mimyvault):
+    strategy = strategist.deploy(Strategy, mim_vault, 3_000_000*1e18, 3600, 500, mimCurvePool, depositMim, mimyvault,"ssc_mim_mim")
     yield strategy
 
 @pytest.fixture

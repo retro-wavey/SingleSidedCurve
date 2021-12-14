@@ -14,12 +14,12 @@ import brownie
 
 
 
-def test_frax_fresh_vault(frax, fraxCurvePool,Strategy,strategy_frax,fraxyvault,frax3CRV, rewards,chain,frax_vault, ychad, whale,gov,strategist, interface):
+def test_mim_fresh_vault(mim, mimCurvePool,Strategy,strategy_mim,mimyvault,mim3CRV, rewards,chain,mim_vault, ychad, whale,gov,strategist, interface):
 
-    vault = frax_vault
-    yvault = fraxyvault
-    strategy = strategy_frax
-    currency = frax
+    vault = mim_vault
+    yvault = mimyvault
+    strategy = strategy_mim
+    currency = mim
     debt_ratio = 10_000
     vault.addStrategy(strategy, debt_ratio, 0, 2 ** 256 - 1, 1000, {"from": gov})
     vault.setManagementFee(0, {"from": gov})
