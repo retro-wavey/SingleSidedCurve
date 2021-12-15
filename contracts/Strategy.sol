@@ -115,7 +115,7 @@ contract Strategy is BaseStrategy {
     }
     function _setupStatics() internal {
         maxReportDelay = 86400;
-        profitFactor = 1e22;
+        profitFactor = 1e30;
         minReportDelay = 3600;
         debtThreshold = 1e30;
         withdrawProtection = true;
@@ -144,7 +144,7 @@ contract Strategy is BaseStrategy {
         address _yvToken,
         string memory _strategyName
     ) external returns (address payable newStrategy) {
-        // require(isOriginal, "Clone inception!");
+        require(isOriginal, "Clone inception!");
         bytes20 addressBytes = bytes20(address(this));
 
         assembly {
