@@ -95,7 +95,6 @@ contract Strategy is BaseStrategy {
         if(curveId == 0){
             depositContract = basePool;
         }
-
         maxSingleInvest = _maxSingleInvest;
         minTimePerInvest = _minTimePerInvest;
         slippageProtectionIn = _slippageProtectionIn;
@@ -106,7 +105,7 @@ contract Strategy is BaseStrategy {
         _setupStatics();
 
     }
-    function _findCurveId() internal returns(int128){
+    function _findCurveId() internal view returns(int128){
         if(address(want) == address(0x6B175474E89094C44Da98b954EedeAC495271d0F)) return 1; // DAI
         if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC
         if(address(want) == address(0xdAC17F958D2ee523a2206206994597C13D831ec7)) return 3; // USDT
@@ -123,10 +122,10 @@ contract Strategy is BaseStrategy {
         sscVersion = "v5 factory 3pool";
         curveToken.approve(address(yvToken), type(uint256).max);
         if(curveId==0){
-            want.approve(address(basePool), type(uint256).max);
+            want.safeApprove(address(basePool), type(uint256).max);
         }
         else{
-            want.approve(address(depositContract), type(uint256).max);
+            want.safeApprove(address(depositContract), type(uint256).max);
             curveToken.approve(address(depositContract), type(uint256).max);
         }
     }

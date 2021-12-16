@@ -22,7 +22,34 @@ def get_address(msg: str) -> str:
                 return addr
         print(f"I'm sorry, but '{val}' is not a checksummed address or ENS")
 
+def get_src():
+    f = open('/home/wavey/ssc.sol', 'w')
+    Strategy.get_verification_info()
+    f.write(Strategy._flattener.flattened_source)
+    f.close()
 
+def deploy_usdt_frax():
+    # strategist = accounts.load("dev")
+    strategist = accounts[3]
+    frax_yvault = "0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139"
+    yvusdt = "0x7Da96a3891Add058AdA2E826306D812C638D87a7"
+    frax_pool = "0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B"
+    deposit_frax = "0xA79828DF1850E8a3A3064576f380D90aECDD3359"
+
+    strategy = strategist.deploy(
+        Strategy, 
+        yvusdt, 
+        3_000_000*1e18, 
+        3600, 
+        500, 
+        frax_pool, 
+        deposit_frax, 
+        frax_yvault,
+        "ssc_usdt_frax"
+    )
+
+    print("STRATEGY DEPLOYED",strategy)
+    
 def main():
     print(f"You are using the '{network.show_active()}' network")
     dev = accounts.load("dev")

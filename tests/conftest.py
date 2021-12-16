@@ -493,16 +493,52 @@ def strategy_usdc_frax(strategist, depositFrax, interface, keeper, live_usdc_vau
     # ssc_seth = interface.IStrat043("0xc57A4D3FBEF85e675f6C3656498beEfe6F9DcB55")
     # depositUsdn, usdn3crv, usdnyvault,4, threecrv, False,  "ssc ib3crv")
     # strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePool, hCRV, yvaultv2,2, False, "ssc wbtc hbtc")
-    strategy = strategist.deploy(Strategy, live_usdc_vault, 500_000*1e6, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
-    strategy = strategist.deploy(
-        Strategy,
+    # strategy = strategist.deploy(Strategy, live_usdc_vault, 500_000*1e6, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
+    # strategy = strategist.deploy(
+    #     Strategy,
+    #     live_usdc_vault, 
+    #     3_000_000*1e6, 3600, 500,
+    #     fraxCurvePool,  # curvePool
+    #     depositFrax,    # we use deposit contract 
+    #     fraxyvault,     # yvToken
+    #     "ssc_udsc_frax")
+
+    s = Strategy.at("0x92c212F4d6A8Ad964ACAe745e1B45309B470Af6E")
+    tx = s.cloneSingleSidedCurve(
         live_usdc_vault, 
-        3_000_000*1e6, 3600, 500,
+        strategist,
+        3_000_000*1e6, 
+        3600, 
+        500,
         fraxCurvePool,  # curvePool
         depositFrax,    # we use deposit contract 
         fraxyvault,     # yvToken
-        "ssc_udsc_frax")
-    yield strategy
+        "ssc_udsc_frax",
+        {"from":strategist}
+    )
+    
+    yield Strategy.at(tx.return_value)
+
+@pytest.fixture
+def strategy_usdt_frax(strategist, depositFrax, interface, keeper, live_usdc_vault, Strategy, fraxCurvePool, frax3CRV, fraxyvault, threecrv, zeroaddress):
+    # frax_yvault = "0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139"
+    # yvusdt = "0x7Da96a3891Add058AdA2E826306D812C638D87a7"
+    # frax_pool = "0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B"
+    # deposit_frax = "0xA79828DF1850E8a3A3064576f380D90aECDD3359"
+
+    # strategy = strategist.deploy(
+    #     Strategy, 
+    #     yvusdt, 
+    #     3_000_000*1e18, 
+    #     3600, 
+    #     500, 
+    #     frax_pool, 
+    #     deposit_frax, 
+    #     frax_yvault,
+    #     "ssc_usdt_frax"
+    # )
+
+    yield Strategy.at("0x92c212F4d6A8Ad964ACAe745e1B45309B470Af6E")
 
 @pytest.fixture
 def strategy_usdc_ib2(strategist, interface, keeper, usdc_vault, Strategy, ibCurvePool, ib3CRV, ibyvault, zeroaddress):
@@ -517,7 +553,7 @@ def strategy_usdc_ib2(strategist, interface, keeper, usdc_vault, Strategy, ibCur
         zeroaddress, 
         True, "ssc udsc ib",{'from': strategist})
     strategy = Strategy.at(tx.return_value)
-    yield strategy
+    yield Strategy.at(tx.return_value)
 
 @pytest.fixture
 def strategy_wbtc_hbtc(strategist, keeper, live_wbtc_vault, Strategy, curvePool, hCRV, yvaultv2):

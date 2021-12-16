@@ -6,9 +6,9 @@ from useful_methods import genericStateOfStrat,genericStateOfVault
 import random
 import brownie
 
-def test_usdc_frax_fresh_convex(usdc, stratms, whale, Strategy, strategy_usdc_frax, accounts, fraxyvault, chain, usdc_vault, live_usdc_vault, ychad, gov, strategist, interface):
-    strategy = strategy_usdc_frax
-    vault = live_usdc_vault
+def test_usdt_frax_fresh_convex(usdt, stratms, whale, Strategy, strategy_usdt_frax, accounts, fraxyvault, chain, live_usdt_vault, ychad, gov, strategist, interface):
+    strategy = strategy_usdt_frax
+    vault = live_usdt_vault
     currency = interface.ERC20(vault.token())
     decimals = currency.decimals()
     gov = accounts.at(vault.governance(), force=True)
@@ -46,8 +46,8 @@ def test_usdc_frax_fresh_convex(usdc, stratms, whale, Strategy, strategy_usdc_fr
     chain.mine(1)
 
     # Harvest strategy and expect Profits
-    strategy.updateSlippageProtectionIn(5000,{'from': gov})
-    strategy.updateSlippageProtectionOut(5000,{'from': gov})
+    strategy.updateSlippageProtectionIn(0,{'from': gov})
+    strategy.updateSlippageProtectionOut(0,{'from': gov})
     tx = strategy.harvest({'from': gov})
     print("Strategy",tx.events["Harvested"])
     assert tx.events["Harvested"]["profit"] > 0

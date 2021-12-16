@@ -26,8 +26,8 @@ def make_tenderly_fork(block_number=None):
     web3.provider = tenderly_provider
     click.secho(f"https://dashboard.tenderly.co/yearn/yearn-web/fork/{fork_id}", fg='yellow')
 
-def test_frax_fresh_vault(frax, fraxCurvePool,Strategy,strategy_frax,fraxyvault,frax3CRV, rewards,chain,frax_vault, ychad, whale,gov,strategist, interface):
-    # make_tenderly_fork()
+def test_frax_fresh_vault(frax, strategy_usdt_frax, fraxCurvePool,Strategy,strategy_frax,fraxyvault,frax3CRV, rewards,chain,frax_vault, ychad, whale,gov,strategist, interface):
+    make_tenderly_fork()
     vault = frax_vault
     yvault = fraxyvault
     strategy = strategy_frax
