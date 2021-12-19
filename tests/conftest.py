@@ -1,5 +1,5 @@
 import pytest
-from brownie import config
+from brownie import config, Contract
 from brownie import network
 
 @pytest.fixture
@@ -21,18 +21,28 @@ def live_vault_usdt(pm):
 
 @pytest.fixture
 def wbtc(interface):
-    #this one is hbtc
     yield interface.ERC20('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
 
 @pytest.fixture
+def frax(interface):
+    yield interface.ERC20('0x853d955aCEf822Db058eb8505911ED77F175b99e')
+
+@pytest.fixture
+def mim(interface):
+    yield interface.ERC20('0x99D8a9C45b2ecA8864373A26D1459e3Dff1e17F3')
+
+@pytest.fixture
 def tusd(interface):
-    #this one is hbtc
     yield interface.ERC20('0x0000000000085d4780B73119b644AE5ecd22b376')
 
 @pytest.fixture
 def dai(interface):
-    #this one is hbtc
     yield interface.ERC20('0x6b175474e89094c44da98b954eedeac495271d0f')
+
+@pytest.fixture
+def usdc(interface):
+    yield interface.ERC20('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')
+
 
 @pytest.fixture
 def hbtc(interface):
@@ -45,12 +55,14 @@ def usdt(interface):
 
 
 @pytest.fixture
-def whale(accounts, web3, currency, chain, wbtc, dai, hbtc):
+def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax, mim):
     network.gas_price("0 gwei")
     network.gas_limit(6700000)
 
     daiAcc = accounts.at("0xb0Fa2BeEe3Cf36a7Ac7E99B885b48538Ab364853", force=True)
-
+    usdcAcc = accounts.at("0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503", force=True)
+    fraxAcc = accounts.at("0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf", force=True)
+    mimAcc = accounts.at("0x9AEF7C447F6BC8D010B22afF52d5b67785ED942C", force=True)
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
@@ -64,14 +76,16 @@ def whale(accounts, web3, currency, chain, wbtc, dai, hbtc):
     #wbtc account
     wb = accounts.at('0x3dfd23A6c5E8BbcFc9581d2E864a68feb6a076d3', force=True)
     wbtc.transfer(acc, wbtc.balanceOf(wb),  {'from': wb})
+    usdc.transfer(acc, usdc.balanceOf(usdcAcc),  {'from': usdcAcc})
     dai.transfer(acc, dai.balanceOf(daiAcc),  {'from': daiAcc})
     dai.transfer(acc, hbtc.balanceOf(hbtcAcc),  {'from': hbtcAcc})
-
-
-
+    frax.transfer(acc, frax.balanceOf(fraxAcc),  {'from': fraxAcc})
+    mim.transfer(acc, mim.balanceOf(mimAcc),  {'from': mimAcc})
     assert currency.balanceOf(acc)  > 0
     assert wbtc.balanceOf(acc)  > 0
     assert hbtc.balanceOf(acc)  > 0
+    assert frax.balanceOf(acc) > 0
+    assert mim.balanceOf(acc) > 0
     yield acc
 
 
@@ -107,6 +121,18 @@ def ibyvault(Vault):
     yield Vault.at('0x27b7b1ad7288079A66d12350c828D3C00A6F07d7')
 
 @pytest.fixture
+def fraxyvault(Vault):
+    yield Vault.at('0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139')
+
+@pytest.fixture
+def mimyvault(Vault):
+    yield Vault.at('0x2DfB14E32e2F8156ec15a2c21c3A6c053af52Be8')
+
+@pytest.fixture
+def ustyvault(Vault):
+    yield Vault.at('0x2DfB14E32e2F8156ec15a2c21c3A6c053af52Be8')
+
+@pytest.fixture
 def usdnyvault(Vault):
     yield Vault.at('0x3B96d491f067912D18563d56858Ba7d6EC67a6fa')
 
@@ -121,6 +147,18 @@ def live_wbtc_vault(pm):
     yield vault
 
 @pytest.fixture
+def live_usdc_vault(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE')
+    yield vault
+
+@pytest.fixture
+def live_usdc_vault_old(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9')
+    yield vault
+
+@pytest.fixture
 def live_hbtc_vault(pm):
     Vault = pm(config["dependencies"][0]).Vault
     vault = Vault.at('0x0F6121fB28C7C42916d663171063c62684598f9F')
@@ -129,6 +167,35 @@ def live_hbtc_vault(pm):
 @pytest.fixture
 def wbtc_vault(pm, gov, rewards, guardian, wbtc):
     currency = wbtc
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
+@pytest.fixture
+def frax_vault(pm, gov, rewards, guardian, frax):
+    currency = frax
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    # vault.setGovernance(g, {"from": gov})
+    # vault.acceptGovernance({"from": g})
+    yield vault
+
+@pytest.fixture
+def mim_vault(pm, gov, rewards, guardian, mim):
+    currency = mim
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
+@pytest.fixture
+def usdc_vault(pm, gov, rewards, guardian, usdc):
+    currency = usdc
     Vault = pm(config["dependencies"][0]).Vault
     vault = gov.deploy(Vault)
     vault.initialize(currency, gov, rewards, "", "", guardian, {"from": gov})
@@ -198,7 +265,12 @@ def curvePool(interface):
 @pytest.fixture
 def depositUsdn(interface):
     yield interface.ICurveFi('0x094d12e5b541784701FD8d65F11fc0598FBC6332')
-
+@pytest.fixture
+def depositFrax(interface):
+    yield interface.ICurveFi('0xA79828DF1850E8a3A3064576f380D90aECDD3359')
+@pytest.fixture
+def depositMim(interface):
+    yield interface.ICurveFi('0xA79828DF1850E8a3A3064576f380D90aECDD3359')
 @pytest.fixture
 def curvePoolObtc(interface):
     yield interface.ICurveFi('0xd5BCf53e2C81e1991570f33Fa881c49EEa570C8D')
@@ -218,6 +290,20 @@ def curvePoolPbtc(interface):
 @pytest.fixture
 def ibCurvePool(interface):
     yield interface.ICurveFi('0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF')
+
+@pytest.fixture
+def fraxCurvePool(interface):
+    yield interface.ICurveFi('0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B')
+@pytest.fixture
+def mimCurvePool(interface):
+    yield interface.ICurveFi('0x5a6A4D54456819380173272A5E8E9B9904BdF41B')
+
+@pytest.fixture
+def frax3CRV(interface):
+    yield interface.ICrvV3('0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B')
+@pytest.fixture
+def mim3CRV(interface):
+    yield interface.ICrvV3('0x5a6A4D54456819380173272A5E8E9B9904BdF41B')
 
 @pytest.fixture
 def ib3CRV(interface):
@@ -263,7 +349,7 @@ def token(andre, Token):
 @pytest.fixture
 def gov(accounts):
     # yearn multis... I mean YFI governance. I swear!
-    yield accounts[1]
+    yield accounts.at('0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52', force=True)
 
 
 @pytest.fixture
@@ -356,11 +442,20 @@ def live_usdt_vault(pm):
     yield vault
 
 @pytest.fixture
+def strategy_frax(strategist,Strategy, frax_vault, fraxCurvePool, depositFrax, fraxyvault):
+    strategy = strategist.deploy(Strategy, frax_vault, 3_000_000*1e18, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
+    yield strategy
+
+@pytest.fixture
+def strategy_mim(strategist,Strategy, mim_vault, mimCurvePool, depositMim, mimyvault):
+    strategy = strategist.deploy(Strategy, mim_vault, 3_000_000*1e18, 3600, 500, mimCurvePool, depositMim, mimyvault,"ssc_mim_mim")
+    yield strategy
+
+@pytest.fixture
 def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy_wbtc, ibCurvePool, ib3CRV, ibyvault):
     #strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
     tx = live_strategy_wbtc.cloneSingleSidedCurve(live_usdt_vault, strategist, strategist, strategist, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, "ssc ib3crv",{'from': strategist})
     yield Strategy.at(tx.return_value)
-
 
 @pytest.fixture
 def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault,healthcheck):
@@ -371,9 +466,119 @@ def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, i
 
 @pytest.fixture
 def strategy_dai_usdn(strategist, keeper, dai_vault, Strategy, depositUsdn, usdn3crv, usdnyvault, threecrv):
-    strategy = strategist.deploy(Strategy, dai_vault, 1_000_000*1e18, 3600, 5000, depositUsdn, usdn3crv, usdnyvault,4, threecrv, False,  "ssc ib3crv")
+    strategy = strategist.deploy(
+        Strategy, 
+        dai_vault, 
+        1_000_000*1e18, 3600, 5000, 
+        depositUsdn, 
+        usdn3crv, 
+        usdnyvault,4, 
+        threecrv, 
+        False,  
+        "ssc ib3crv")
     #strategy.setKeeper(keeper)
     yield strategy
+
+@pytest.fixture
+def strategy_usdc_ib_no_fees_strategy(strategist, interface, keeper, live_usdc_vault, Strategy, ibCurvePool, ib3CRV, ibyvault, zeroaddress):
+    print("deploying...")
+    strategy = strategist.deploy(
+        Strategy,
+        live_usdc_vault,
+        3_000_000*1e6, 3600, 50, 
+        ibCurvePool, 
+        ib3CRV, 
+        ibyvault,
+        3,
+        zeroaddress, 
+        True, 
+        "ssc_udsc_ib_no_fees")
+    print("deploy complete")
+    yield strategy
+
+@pytest.fixture
+def strategy_usdc_ib(strategist, interface, keeper, live_usdc_vault, Strategy, ibCurvePool, ib3CRV, ibyvault, zeroaddress):
+    # There is already a v0.4.3 version of this strategy deployed as ssc_eth_steth, so we will clone from it
+    # ssc_seth = interface.IStrat043("0xc57A4D3FBEF85e675f6C3656498beEfe6F9DcB55")
+    # tx = ssc_seth.cloneSingleSidedCurve(
+    #     live_usdc_vault, strategist, 3_000_000*1e6, 3600, 50, 
+    #     ibCurvePool, 
+    #     ib3CRV, 
+    #     ibyvault,
+    #     3,
+    #     zeroaddress, 
+    #     True, "ssc udsc ib",{'from': strategist})
+    # strategy = Strategy.at(tx.return_value)
+    strategy = Contract("0x0c8f62939Aeee6376f5FAc88f48a5A3F2Cf5dEbB")
+    yield strategy
+
+@pytest.fixture
+def strategy_usdc_frax(strategist, depositFrax, interface, keeper, live_usdc_vault, Strategy, fraxCurvePool, frax3CRV, fraxyvault, threecrv, zeroaddress):
+    # There is already a v0.4.3 version of this strategy deployed as ssc_eth_steth, so we will clone from it
+    # ssc_seth = interface.IStrat043("0xc57A4D3FBEF85e675f6C3656498beEfe6F9DcB55")
+    # depositUsdn, usdn3crv, usdnyvault,4, threecrv, False,  "ssc ib3crv")
+    # strategy = strategist.deploy(Strategy, live_wbtc_vault, 30*1e8, 3600, 500, curvePool, hCRV, yvaultv2,2, False, "ssc wbtc hbtc")
+    # strategy = strategist.deploy(Strategy, live_usdc_vault, 500_000*1e6, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
+    # strategy = strategist.deploy(
+    #     Strategy,
+    #     live_usdc_vault, 
+    #     3_000_000*1e6, 3600, 500,
+    #     fraxCurvePool,  # curvePool
+    #     depositFrax,    # we use deposit contract 
+    #     fraxyvault,     # yvToken
+    #     "ssc_udsc_frax")
+
+    s = Strategy.at("0x92c212F4d6A8Ad964ACAe745e1B45309B470Af6E")
+    tx = s.cloneSingleSidedCurve(
+        live_usdc_vault, 
+        strategist,
+        3_000_000*1e6, 
+        3600, 
+        500,
+        fraxCurvePool,  # curvePool
+        depositFrax,    # we use deposit contract 
+        fraxyvault,     # yvToken
+        "ssc_udsc_frax",
+        {"from":strategist}
+    )
+    
+    yield Strategy.at(tx.return_value)
+
+@pytest.fixture
+def strategy_usdt_frax(strategist, depositFrax, interface, keeper, live_usdc_vault, Strategy, fraxCurvePool, frax3CRV, fraxyvault, threecrv, zeroaddress):
+    # frax_yvault = "0xB4AdA607B9d6b2c9Ee07A275e9616B84AC560139"
+    # yvusdt = "0x7Da96a3891Add058AdA2E826306D812C638D87a7"
+    # frax_pool = "0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B"
+    # deposit_frax = "0xA79828DF1850E8a3A3064576f380D90aECDD3359"
+
+    # strategy = strategist.deploy(
+    #     Strategy, 
+    #     yvusdt, 
+    #     3_000_000*1e18, 
+    #     3600, 
+    #     500, 
+    #     frax_pool, 
+    #     deposit_frax, 
+    #     frax_yvault,
+    #     "ssc_usdt_frax"
+    # )
+
+    yield Strategy.at("0x92c212F4d6A8Ad964ACAe745e1B45309B470Af6E")
+
+@pytest.fixture
+def strategy_usdc_ib2(strategist, interface, keeper, usdc_vault, Strategy, ibCurvePool, ib3CRV, ibyvault, zeroaddress):
+    # There is already a v0.4.3 version of this strategy deployed as ssc_eth_steth, so we will clone from it
+    ssc_seth = interface.IStrat043("0xc57A4D3FBEF85e675f6C3656498beEfe6F9DcB55")
+    tx = ssc_steth.cloneSingleSidedCurve(
+        usdc_vault, strategist, 3_000_000*1e6, 3600, 500, 
+        ibCurvePool, 
+        ib3CRV, 
+        ibyvault,
+        3,
+        zeroaddress, 
+        True, "ssc udsc ib",{'from': strategist})
+    strategy = Strategy.at(tx.return_value)
+    yield Strategy.at(tx.return_value)
 
 @pytest.fixture
 def strategy_wbtc_hbtc(strategist, keeper, live_wbtc_vault, Strategy, curvePool, hCRV, yvaultv2):

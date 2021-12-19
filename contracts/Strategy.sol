@@ -6,9 +6,7 @@ import "./interfaces/curve/Curve.sol";
 import "./interfaces/curve/ICrvV3.sol";
 import "./interfaces/erc20/IERC20Extended.sol";
 import "./interfaces/IWETH.sol";
-
-// These are the core Yearn libraries
-import "@yearnvaults/contracts/BaseStrategy.sol";
+import "./BaseStrategyModified043.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -40,10 +38,9 @@ contract Strategy is BaseStrategy {
     uint256 public slippageProtectionOut;// = 50; //out of 10000. 50 = 0.5%
     uint256 public constant DENOMINATOR = 10_000;
     string internal strategyName;
-
     uint8 private want_decimals;
     uint8 private middle_decimals;
-
+    bool public isOriginal = true;
     int128 public curveId;
     uint256 public poolSize;
     bool public hasUnderlying;
@@ -194,7 +191,8 @@ contract Strategy is BaseStrategy {
         bool _hasUnderlying,
         string memory _strategyName
     ) external returns (address payable newStrategy) {
-         bytes20 addressBytes = bytes20(address(this));
+        require(isOriginal, "Clone inception!");
+        bytes20 addressBytes = bytes20(address(this));
 
         assembly {
             // EIP-1167 bytecode
@@ -328,6 +326,9 @@ contract Strategy is BaseStrategy {
             }else if (wantBalance < _debtPayment.add(_profit)){
                 _debtPayment = wantBalance.sub(_profit);
             }
+        }
+        if(_profit > 0){
+            want.transfer(address(vault), _profit);
         }
     }
 
