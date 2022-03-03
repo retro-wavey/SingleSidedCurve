@@ -34,8 +34,8 @@ contract Strategy is BaseStrategy {
     ICurveFi public basePool;
     ICrvV3 public curveToken;// = ICrvV3(address(0xb19059ebb43466C323583928285a49f558E572Fd));
 
-    address public constant weth = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address public constant uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    address public constant weth = address(0x74b23882a30290451A17c44f4F05243b6b58C76d);
+    address public constant sushiswapRouter = address(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506);
 
     VaultAPI public yvToken;// = IVaultV1(address(0x46AFc2dfBd1ea0c0760CAD8262A5838e803A37e5));
     //IERC20Extended public middleToken; // the token between bluechip and curve pool
@@ -359,7 +359,7 @@ contract Strategy is BaseStrategy {
         path[0] = weth;
         path[1] = address(want);
 
-        uint256[] memory amounts = IUni(uniswapRouter).getAmountsOut(_amount, path);
+        uint256[] memory amounts = IUni(sushiswapRouter).getAmountsOut(_amount, path);
 
         return amounts[amounts.length - 1];
     }

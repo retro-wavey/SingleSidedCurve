@@ -20,6 +20,8 @@ def test_dai_1(usdt,stratms, whale,Strategy, ibCurvePool,strategy_dai_ib, accoun
     gov = accounts.at(vault.governance(), force=True)
     strategy = strategy_dai_ib
 
+    print("Harvest Trigger:", strategy.harvestTrigger(1000000 * 30 * 1e9))
+
     yvault = ibyvault
     #amount = 1000*1e6
     #amounts = [0, 0, amount]

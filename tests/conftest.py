@@ -1,6 +1,6 @@
 import pytest
 from brownie import config
-from brownie import network
+from brownie import network, ZERO_ADDRESS
 
 @pytest.fixture
 def andre(accounts):
@@ -45,6 +45,11 @@ def usdt(interface):
     #this one is hbtc
     yield interface.ERC20('0xdAC17F958D2ee523a2206206994597C13D831ec7')
 
+
+@pytest.fixture
+def ftm_dai_whale(accounts):
+    address = "0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40" # Curve 2pool
+    yield accounts.at(address, force=True)
 
 @pytest.fixture
 def whale(accounts, web3, currency, chain, wbtc, dai, hbtc):
@@ -97,6 +102,10 @@ def wbtcstrategynew(Strategy):
 @pytest.fixture
 def ibyvault(Vault):
     yield Vault.at('0x27b7b1ad7288079A66d12350c828D3C00A6F07d7')
+
+@pytest.fixture
+def geistyvault(Vault):
+    yield Vault.at('0xF137D22d7B23eeB1950B3e19d1f578c053ed9715')
 
 @pytest.fixture
 def usdnyvault(Vault):
@@ -183,9 +192,16 @@ def ibCurvePool(interface):
     yield interface.ICurveFi('0x2dded6Da1BF5DBdF597C45fcFaa3194e53EcfeAF')
 
 @pytest.fixture
+def geistCurvePool(interface):
+    yield interface.ICurveFi('0x0fa949783947Bf6c1b171DB13AEACBB488845B3f')
+
+@pytest.fixture
 def ib3CRV(interface):
     yield interface.ICrvV3('0x5282a4eF67D9C33135340fB3289cc1711c13638C')
-    
+
+@pytest.fixture
+def g3CRV(interface):
+    yield interface.ICrvV3('0xD02a30d33153877BC20e5721ee53DeDEE0422B2F')
 
 @pytest.fixture
 def devms(accounts):
@@ -314,16 +330,32 @@ def live_usdt_vault(pm):
     yield vault
 
 @pytest.fixture
-def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy_wbtc, ibCurvePool, ib3CRV, ibyvault):
-    #strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
-    tx = live_strategy_wbtc.cloneSingleSidedCurve(live_usdt_vault, strategist, strategist, strategist, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, "ssc ib3crv",{'from': strategist})
-    yield Strategy.at(tx.return_value)
-    
+def ftm_dai_vault(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0x637eC617c86D24E421328e6CAEa1d92114892439')
+    yield vault
 
 @pytest.fixture
-def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault,healthcheck):
-    strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True, "ssc ib3crv")
-    strategy.setHealthCheck(healthcheck)
+def strategy_dai_geist(strategist, keeper, ftm_dai_vault, Strategy, geistCurvePool, g3CRV, geistyvault):
+    strategy = strategist.deploy(Strategy, ftm_dai_vault, 100_000_000*1e18, 3600, 500, geistCurvePool, g3CRV, geistyvault, 3, ZERO_ADDRESS, True, "ssc g3crv")
+    strategy.setKeeper(keeper)
+    yield strategy
+
+@pytest.fixture
+def strategy_usdt_ib(strategist,Strategy, keeper, live_usdt_vault, live_strategy_wbtc, ibCurvePool, ib3CRV, ibyvault):
+    #strategy = strategist.deploy(Strategy, live_usdt_vault, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, True)
+    tx = live_strategy_wbtc.cloneSingleSidedCurve(live_usdt_vault, strategist, 500_000*1e6, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, ZERO_ADDRESS, True, "ssc ib3crv",{'from': strategist})
+    yield Strategy.at(tx.return_value)
+
+@pytest.fixture
+def live_eth_governance(accounts):
+    address = '0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52'
+    yield accounts.at(address, force=True)
+
+@pytest.fixture
+def strategy_dai_ib(strategist, keeper, live_vault_dai, Strategy, ibCurvePool, ib3CRV, ibyvault,healthcheck, live_eth_governance):
+    strategy = strategist.deploy(Strategy, live_vault_dai, 1_000_000*1e18, 3600, 500, ibCurvePool, ib3CRV, ibyvault,3, ZERO_ADDRESS, True, "ssc ib3crv")
+    strategy.setHealthCheck(healthcheck, {"from": live_eth_governance})
     strategy.setKeeper(keeper)
     yield strategy
 
@@ -340,9 +372,8 @@ def strategy_wbtc_hbtc(strategist, keeper, live_wbtc_vault, Strategy, curvePool,
     yield strategy
 
 @pytest.fixture
-def strategy_wbtc_obtc(gov, keeper, wbtc_vault,healthcheck, Strategy, curvePoolObtc, obCRV, sbtccrv, yvaultv2Obtc):
+def strategy_wbtc_obtc(gov, keeper, wbtc_vault, Strategy, curvePoolObtc, obCRV, sbtccrv, yvaultv2Obtc):
     strategy = gov.deploy(Strategy, wbtc_vault, 30*1e8, 3600, 500, curvePoolObtc, obCRV, yvaultv2Obtc,4, sbtccrv, False, "ssc wbtc obtc")
-    strategy.setHealthCheck(healthcheck)
     strategy.setKeeper(keeper)
     yield strategy
 
