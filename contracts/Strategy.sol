@@ -405,7 +405,6 @@ contract Strategy is BaseStrategy {
 
     }
 
-    // Min profit to start checking for harvests if gas is good, max will harvest no matter gas (both in USDT, 6 decimals).
     // Credit threshold is in want token, and will trigger a harvest if credit is large enough.
     function setCreditThreshold(uint256 _creditThreshold) external onlyEmergencyAuthorized {
         creditThreshold = _creditThreshold;
