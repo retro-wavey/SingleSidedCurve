@@ -20,6 +20,10 @@ interface IUni {
     function getAmountsOut(uint256 amountIn, address[] calldata path) external view returns (uint256[] memory amounts);
 }
 
+interface IBaseFee {
+    function isCurrentBaseFeeAcceptable() external view returns (bool);
+}
+
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
@@ -44,6 +48,10 @@ contract Strategy is BaseStrategy {
     string public sscVersion;
     uint8 private want_decimals;
     bool public isOriginal = true;
+    // keeper stuff
+    uint256 public creditThreshold; // amount of credit in underlying tokens that will automatically trigger a harvest
+    bool internal forceHarvestTriggerOnce; // only set this to true when we want to trigger our keepers to harvest for us
+
 
     int128 public curveId;
     address public metaToken;
@@ -165,23 +173,23 @@ contract Strategy is BaseStrategy {
         return strategyName;
     }
 
-    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyAuthorized {
+    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyEmergencyAuthorized {
         minTimePerInvest = _minTimePerInvest;
     }
 
-    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyAuthorized {
+    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyEmergencyAuthorized {
         maxSingleInvest = _maxSingleInvest;
     }
 
-    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyAuthorized {
+    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyEmergencyAuthorized {
         slippageProtectionIn = _slippageProtectionIn;
     }
 
-    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyAuthorized {
+    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyEmergencyAuthorized {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
-    function updateWithdrawProtection(bool _withdrawProtection) public onlyAuthorized {
+    function updateWithdrawProtection(bool _withdrawProtection) public onlyEmergencyAuthorized {
         withdrawProtection = _withdrawProtection;
     }
 
@@ -278,7 +286,6 @@ contract Strategy is BaseStrategy {
     }
 
     function liquidateAllPositions() internal override returns (uint256 _amountFreed) {
-
         (_amountFreed, ) = liquidatePosition(1e36); //we can request a lot. dont use max because of overflow
     }
 
@@ -398,6 +405,61 @@ contract Strategy is BaseStrategy {
 
     }
 
+    // Credit threshold is in want token, and will trigger a harvest if credit is large enough.
+    function setCreditThreshold(uint256 _creditThreshold) external onlyEmergencyAuthorized {
+        creditThreshold = _creditThreshold;
+    }
+
+    // This allows us to manually harvest with our keeper as needed
+    function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce) external onlyEmergencyAuthorized {
+        forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
+    }
+
+    // check if the current baseFee is below our external target
+    function isBaseFeeAcceptable() internal view returns (bool) {
+        return
+            IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F)
+                .isCurrentBaseFeeAcceptable();
+    }
+
+    /* ========== KEEP3RS ========== */
+    // use this to determine when to harvest
+    function harvestTrigger(uint256 callCostinEth)
+        public
+        view
+        override
+        returns (bool)
+    {
+        // Should not trigger if strategy is not active (no assets and no debtRatio). This means we don't need to adjust keeper job.
+        if (!isActive()) {
+            return false;
+        }
+
+        // check if the base fee gas price is higher than we allow. if it is, block harvests.
+        if (!isBaseFeeAcceptable()) {
+            return false;
+        }
+
+        // trigger if we want to manually harvest, but only if our gas price is acceptable
+        if (forceHarvestTriggerOnce) {
+            return true;
+        }
+
+        StrategyParams memory params = vault.strategies(address(this));
+        // harvest no matter what once we reach our maxDelay
+        if (block.timestamp.sub(params.lastReport) > maxReportDelay) {
+            return true;
+        }
+
+        // harvest our credit if it's above our threshold
+        if (vault.creditAvailable() > creditThreshold) {
+            return true;
+        }
+
+        // otherwise, we don't harvest
+        return false;
+    }
+
     function prepareMigration(address _newStrategy) internal override {
         yvToken.transfer(_newStrategy, yvToken.balanceOf(address(this)));
     }
@@ -413,6 +475,4 @@ contract Strategy is BaseStrategy {
 
           return protected;
     }
-
-    receive() external payable {}
 }
