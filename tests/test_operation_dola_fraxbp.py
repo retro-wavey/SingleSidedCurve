@@ -37,4 +37,9 @@ def test_dola_dolafraxbp(dai,stratms, whale,Strategy, strategy_dola_fraxbp, acco
  
     vault.deposit({"from": whale})
     strategy.harvest({'from': strategist})
+    assert strategy.estimatedTotalAssets() > 0
+
+    vault.updateStrategyDebtRatio(strategy, 0,{'from': gov})
+    strategy.harvest({'from': strategist})
+    assert strategy.estimatedTotalAssets() < 1_000e18
     genericStateOfStrat(strategy, currency, vault)

@@ -320,7 +320,7 @@ contract Strategy is BaseStrategy {
             basePool.add_liquidity(amounts, maxSlip);
         }
         else{
-            uint256[4] memory amounts;
+            uint256[3] memory amounts;
             amounts[uint256(curveId)] = _wantToInvest;
             depositContract.add_liquidity(address(basePool), amounts, maxSlip);
         }
