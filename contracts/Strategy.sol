@@ -116,14 +116,13 @@ contract Strategy is BaseStrategy {
 
     }
     function _findCurveId(address bp) internal view returns(int128){
+        if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC is same index in both bps
         if(bp == threeCrv){ // 3CRV BP
             if(address(want) == address(0x6B175474E89094C44Da98b954EedeAC495271d0F)) return 1; // DAI
-            if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC
             if(address(want) == address(0xdAC17F958D2ee523a2206206994597C13D831ec7)) return 3; // USDT
         }
         else{ // FRAX BP
             if(address(want) == address(0x853d955aCEf822Db058eb8505911ED77F175b99e)) return 1; // FRAX
-            if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC
         }
         if(address(want) == basePool.coins(0)) return 0;
         revert();
