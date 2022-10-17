@@ -36,6 +36,7 @@ contract Strategy is BaseStrategy {
     IWETH public constant weth = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address public constant uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address private constant fraxBp = 0x3175Df0976dFA876431C2E9eE6Bc45b65d3473CC;
+    address private constant threeCrv = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 
     VaultAPI public yvToken;
     uint256 public lastInvest; // default is 0
@@ -98,8 +99,9 @@ contract Strategy is BaseStrategy {
         require(want_decimals == 0, "Already Initialized");
         depositContract = ICurveFi(_depositContract);
         basePool = ICurveFi(_basePool);
-        require(basePool.coins(1) == fraxBp);
-        curveId = _findCurveId();
+        address bp = basePool.coins(1);
+        require(bp == threeCrv || bp == fraxBp);
+        curveId = _findCurveId(bp);
         if(curveId == 0){
             depositContract = basePool;
         }
@@ -113,9 +115,16 @@ contract Strategy is BaseStrategy {
         _setupStatics();
 
     }
-    function _findCurveId() internal view returns(int128){
-        if(address(want) == address(0x853d955aCEf822Db058eb8505911ED77F175b99e)) return 1; // FRAX
-        if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC
+    function _findCurveId(address bp) internal view returns(int128){
+        if(bp == threeCrv){ // 3CRV BP
+            if(address(want) == address(0x6B175474E89094C44Da98b954EedeAC495271d0F)) return 1; // DAI
+            if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC
+            if(address(want) == address(0xdAC17F958D2ee523a2206206994597C13D831ec7)) return 3; // USDT
+        }
+        else{ // FRAX BP
+            if(address(want) == address(0x853d955aCEf822Db058eb8505911ED77F175b99e)) return 1; // FRAX
+            if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC
+        }
         if(address(want) == basePool.coins(0)) return 0;
         revert();
     }
@@ -320,7 +329,10 @@ contract Strategy is BaseStrategy {
             basePool.add_liquidity(amounts, maxSlip);
         }
         else{
-            uint256[3] memory amounts;
+            uint256[4] memory amounts;
+            if (address(basePool) == fraxBp) {
+                uint256[3] memory amounts;
+            }
             amounts[uint256(curveId)] = _wantToInvest;
             depositContract.add_liquidity(address(basePool), amounts, maxSlip);
         }
