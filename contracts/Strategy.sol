@@ -39,6 +39,7 @@ contract Strategy is BaseStrategy {
     address private constant threeCrv = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 
     VaultAPI public yvToken;
+    address public partner;
     uint256 public lastInvest; // default is 0
     uint256 public minTimePerInvest;// = 3600;
     uint256 public maxSingleInvest;// // 2 hbtc per hour default
@@ -57,6 +58,14 @@ contract Strategy is BaseStrategy {
     int128 public curveId;
     address public metaToken;
     bool public withdrawProtection;
+
+    modifier onlySettingsAuthorizors() {
+        require(
+            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management() || msg.sender == partner,
+            "!authorized"
+        );
+        _;
+    }
 
     constructor(
         address _vault,
@@ -180,23 +189,27 @@ contract Strategy is BaseStrategy {
         return strategyName;
     }
 
-    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyEmergencyAuthorized {
+    function updatePartner(address _partner) public onlySettingsAuthorizors {
+        partner = _partner;
+    }
+
+    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlySettingsAuthorizors {
         minTimePerInvest = _minTimePerInvest;
     }
 
-    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyEmergencyAuthorized {
+    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlySettingsAuthorizors {
         maxSingleInvest = _maxSingleInvest;
     }
 
-    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyEmergencyAuthorized {
+    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlySettingsAuthorizors {
         slippageProtectionIn = _slippageProtectionIn;
     }
 
-    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyEmergencyAuthorized {
+    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlySettingsAuthorizors {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
-    function updateWithdrawProtection(bool _withdrawProtection) public onlyEmergencyAuthorized {
+    function updateWithdrawProtection(bool _withdrawProtection) public onlySettingsAuthorizors {
         withdrawProtection = _withdrawProtection;
     }
 
