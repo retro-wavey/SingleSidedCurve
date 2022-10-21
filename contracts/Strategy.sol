@@ -182,7 +182,7 @@ contract StrategyFedPartner is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _basePool, _depositContract, _yvToken, _strategyName);
+        StrategyFedPartner(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _basePool, _depositContract, _yvToken, _strategyName);
 
         emit Cloned(newStrategy);
 
