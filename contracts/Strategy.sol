@@ -24,7 +24,9 @@ interface IBaseFee {
     function isCurrentBaseFeeAcceptable() external view returns (bool);
 }
 
-contract Strategy is BaseStrategy {
+// This is a special purpose strategy designed for non-production vaults.
+// It features ability to allow a partner address to control select configurations.
+contract StrategyFedPartner is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -156,6 +158,7 @@ contract Strategy is BaseStrategy {
 
     event Cloned(address indexed clone);
 
+    // If cloning a strategy for production, please use a production strategy. Not this one.
     function cloneSingleSidedCurve(
         address _vault,
         address _strategist,
