@@ -59,7 +59,7 @@ contract Strategy is BaseStrategy {
     address public metaToken;
     bool public withdrawProtection;
 
-    modifier onlySettingsAuthorizors() {
+    modifier onlySettingsAuthorizooors() {
         require(
             msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management() || msg.sender == partner,
             "!authorized"
@@ -189,27 +189,27 @@ contract Strategy is BaseStrategy {
         return strategyName;
     }
 
-    function updatePartner(address _partner) public onlySettingsAuthorizors {
+    function updatePartner(address _partner) public onlySettingsAuthorizooors {
         partner = _partner;
     }
 
-    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlySettingsAuthorizors {
+    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlySettingsAuthorizooors {
         minTimePerInvest = _minTimePerInvest;
     }
 
-    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlySettingsAuthorizors {
+    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlySettingsAuthorizooors {
         maxSingleInvest = _maxSingleInvest;
     }
 
-    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlySettingsAuthorizors {
+    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlySettingsAuthorizooors {
         slippageProtectionIn = _slippageProtectionIn;
     }
 
-    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlySettingsAuthorizors {
+    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlySettingsAuthorizooors {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
-    function updateWithdrawProtection(bool _withdrawProtection) public onlySettingsAuthorizors {
+    function updateWithdrawProtection(bool _withdrawProtection) public onlySettingsAuthorizooors {
         withdrawProtection = _withdrawProtection;
     }
 
