@@ -24,7 +24,9 @@ interface IBaseFee {
     function isCurrentBaseFeeAcceptable() external view returns (bool);
 }
 
-contract Strategy is BaseStrategy {
+// This is a special purpose strategy designed for non-production vaults.
+// It features ability to allow a partner address to control select configurations.
+contract StrategyFedPartner is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -39,6 +41,7 @@ contract Strategy is BaseStrategy {
     address private constant threeCrv = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 
     VaultAPI public yvToken;
+    address public partner;
     uint256 public lastInvest; // default is 0
     uint256 public minTimePerInvest;// = 3600;
     uint256 public maxSingleInvest;// // 2 hbtc per hour default
@@ -57,6 +60,14 @@ contract Strategy is BaseStrategy {
     int128 public curveId;
     address public metaToken;
     bool public withdrawProtection;
+
+    modifier onlySettingsAuthorizooors() {
+        require(
+            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management() || msg.sender == partner,
+            "!authorized"
+        );
+        _;
+    }
 
     constructor(
         address _vault,
@@ -147,6 +158,7 @@ contract Strategy is BaseStrategy {
 
     event Cloned(address indexed clone);
 
+    // If cloning a strategy for production, please use a production strategy. Not this one.
     function cloneSingleSidedCurve(
         address _vault,
         address _strategist,
@@ -170,7 +182,7 @@ contract Strategy is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        Strategy(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _basePool, _depositContract, _yvToken, _strategyName);
+        StrategyFedPartner(newStrategy).initialize(_vault, _strategist, _maxSingleInvest, _minTimePerInvest, _slippageProtectionIn, _basePool, _depositContract, _yvToken, _strategyName);
 
         emit Cloned(newStrategy);
 
@@ -180,23 +192,27 @@ contract Strategy is BaseStrategy {
         return strategyName;
     }
 
-    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyEmergencyAuthorized {
+    function updatePartner(address _partner) public onlySettingsAuthorizooors {
+        partner = _partner;
+    }
+
+    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlySettingsAuthorizooors {
         minTimePerInvest = _minTimePerInvest;
     }
 
-    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyEmergencyAuthorized {
+    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlySettingsAuthorizooors {
         maxSingleInvest = _maxSingleInvest;
     }
 
-    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyEmergencyAuthorized {
+    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlySettingsAuthorizooors {
         slippageProtectionIn = _slippageProtectionIn;
     }
 
-    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyEmergencyAuthorized {
+    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlySettingsAuthorizooors {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
-    function updateWithdrawProtection(bool _withdrawProtection) public onlyEmergencyAuthorized {
+    function updateWithdrawProtection(bool _withdrawProtection) public onlySettingsAuthorizooors {
         withdrawProtection = _withdrawProtection;
     }
 
