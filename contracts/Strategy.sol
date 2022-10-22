@@ -11,9 +11,6 @@ import "./interfaces/IWETH.sol";
 import "@yearnvaults/contracts/BaseStrategy.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
 interface IUni {
@@ -27,10 +24,6 @@ interface IBaseFee {
 // This is a special purpose strategy designed for non-production vaults.
 // It features ability to allow a partner address to control select configurations.
 contract StrategyFedPartner is BaseStrategy {
-    using SafeERC20 for IERC20;
-    using Address for address;
-    using SafeMath for uint256;
-
     ICurveFi public basePool;
     ICurveFi public depositContract;
     ICrvV3 public curveToken;
@@ -192,7 +185,7 @@ contract StrategyFedPartner is BaseStrategy {
         return strategyName;
     }
 
-    function updatePartner(address _partner) public onlySettingsAuthorizooors {
+    function updatePartner(address _partner) public onlyEmergencyAuthorized {
         partner = _partner;
     }
 
