@@ -11,9 +11,6 @@ import "./interfaces/IWETH.sol";
 import "@yearnvaults/contracts/BaseStrategy.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/Math.sol";
 
 interface IUni {
@@ -25,19 +22,18 @@ interface IBaseFee {
 }
 
 contract Strategy is BaseStrategy {
-    using SafeERC20 for IERC20;
-    using Address for address;
-    using SafeMath for uint256;
-
+    
     ICurveFi public basePool;
     ICurveFi public depositContract;
     ICrvV3 public curveToken;
 
     IWETH public constant weth = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     address public constant uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address private constant fraxBp = 0x3175Df0976dFA876431C2E9eE6Bc45b65d3473CC;
     address private constant threeCrv = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
 
     VaultAPI public yvToken;
+    address public partner;
     uint256 public lastInvest; // default is 0
     uint256 public minTimePerInvest;// = 3600;
     uint256 public maxSingleInvest;// // 2 hbtc per hour default
@@ -56,6 +52,14 @@ contract Strategy is BaseStrategy {
     int128 public curveId;
     address public metaToken;
     bool public withdrawProtection;
+
+    modifier onlySettingsAuthorizors() {
+        require(
+            msg.sender == strategist || msg.sender == governance() || msg.sender == vault.guardian() || msg.sender == vault.management() || msg.sender == partner,
+            "!authorized"
+        );
+        _;
+    }
 
     constructor(
         address _vault,
@@ -98,8 +102,9 @@ contract Strategy is BaseStrategy {
         require(want_decimals == 0, "Already Initialized");
         depositContract = ICurveFi(_depositContract);
         basePool = ICurveFi(_basePool);
-        require(basePool.coins(1) == threeCrv);
-        curveId = _findCurveId();
+        address bp = basePool.coins(1);
+        require(bp == threeCrv || bp == fraxBp);
+        curveId = _findCurveId(bp);
         if(curveId == 0){
             depositContract = basePool;
         }
@@ -113,11 +118,16 @@ contract Strategy is BaseStrategy {
         _setupStatics();
 
     }
-    function _findCurveId() internal view returns(int128){
-        if(address(want) == address(0x6B175474E89094C44Da98b954EedeAC495271d0F)) return 1; // DAI
-        if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC
-        if(address(want) == address(0xdAC17F958D2ee523a2206206994597C13D831ec7)) return 3; // USDT
+    function _findCurveId(address bp) internal view returns(int128){
         if(address(want) == basePool.coins(0)) return 0;
+        if(address(want) == address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)) return 2; // USDC is same index in both bps
+        if(bp == threeCrv){ // 3CRV BP
+            if(address(want) == address(0x6B175474E89094C44Da98b954EedeAC495271d0F)) return 1; // DAI
+            if(address(want) == address(0xdAC17F958D2ee523a2206206994597C13D831ec7)) return 3; // USDT
+        }
+        else{ // FRAX BP
+            if(address(want) == address(0x853d955aCEf822Db058eb8505911ED77F175b99e)) return 1; // FRAX
+        }
         revert();
     }
     function _setupStatics() internal {
@@ -173,23 +183,27 @@ contract Strategy is BaseStrategy {
         return strategyName;
     }
 
-    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlyEmergencyAuthorized {
+    function updatePartner(address _partner) public onlySettingsAuthorizors {
+        partner = _partner;
+    }
+
+    function updateMinTimePerInvest(uint256 _minTimePerInvest) public onlySettingsAuthorizors {
         minTimePerInvest = _minTimePerInvest;
     }
 
-    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlyEmergencyAuthorized {
+    function updateMaxSingleInvest(uint256 _maxSingleInvest) public onlySettingsAuthorizors {
         maxSingleInvest = _maxSingleInvest;
     }
 
-    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlyEmergencyAuthorized {
+    function updateSlippageProtectionIn(uint256 _slippageProtectionIn) public onlySettingsAuthorizors {
         slippageProtectionIn = _slippageProtectionIn;
     }
 
-    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlyEmergencyAuthorized {
+    function updateSlippageProtectionOut(uint256 _slippageProtectionOut) public onlySettingsAuthorizors {
         slippageProtectionOut = _slippageProtectionOut;
     }
 
-    function updateWithdrawProtection(bool _withdrawProtection) public onlyEmergencyAuthorized {
+    function updateWithdrawProtection(bool _withdrawProtection) public onlySettingsAuthorizors {
         withdrawProtection = _withdrawProtection;
     }
 
@@ -322,6 +336,9 @@ contract Strategy is BaseStrategy {
         }
         else{
             uint256[4] memory amounts;
+            if (address(basePool) == fraxBp) {
+                uint256[3] memory amounts;
+            }
             amounts[uint256(curveId)] = _wantToInvest;
             depositContract.add_liquidity(address(basePool), amounts, maxSlip);
         }
@@ -468,11 +485,6 @@ contract Strategy is BaseStrategy {
         internal
         override
         view
-        returns (address[] memory) {
-
-        address[] memory protected = new address[](1);
-          protected[0] = address(yvToken);
-
-          return protected;
-    }
+        returns (address[] memory) 
+    {}
 }

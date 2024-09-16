@@ -24,6 +24,14 @@ def wbtc(interface):
     yield interface.ERC20('0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599')
 
 @pytest.fixture
+def dola(interface):
+    yield interface.ERC20('0x865377367054516e17014CcdED1e7d814EDC9ce4')
+
+@pytest.fixture
+def dola_fraxbp_pool(interface):
+    yield interface.ERC20('0xE57180685E3348589E9521aa53Af0BCD497E884d')
+
+@pytest.fixture
 def frax(interface):
     yield interface.ERC20('0x853d955aCEf822Db058eb8505911ED77F175b99e')
 
@@ -55,7 +63,7 @@ def usdt(interface):
 
 
 @pytest.fixture
-def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax, mim):
+def whale(accounts, web3, currency, chain, wbtc, dola, dai, hbtc, usdc, frax, mim):
     network.gas_price("0 gwei")
     network.gas_limit(6700000)
 
@@ -63,6 +71,8 @@ def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax, mim):
     usdcAcc = accounts.at("0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503", force=True)
     fraxAcc = accounts.at("0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf", force=True)
     mimAcc = accounts.at("0x9AEF7C447F6BC8D010B22afF52d5b67785ED942C", force=True)
+    dolaAcc = accounts.at("0x7Fcb7DAC61eE35b3D4a51117A7c58D53f0a8a670", force=True)
+    
     #big binance7 wallet
     #acc = accounts.at('0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8', force=True)
     #big binance8 wallet
@@ -81,11 +91,13 @@ def whale(accounts, web3, currency, chain, wbtc, dai, hbtc, usdc, frax, mim):
     dai.transfer(acc, hbtc.balanceOf(hbtcAcc),  {'from': hbtcAcc})
     frax.transfer(acc, frax.balanceOf(fraxAcc),  {'from': fraxAcc})
     mim.transfer(acc, mim.balanceOf(mimAcc),  {'from': mimAcc})
+    dola.transfer(acc, dola.balanceOf(dolaAcc),  {'from': dolaAcc})
     assert currency.balanceOf(acc)  > 0
     assert wbtc.balanceOf(acc)  > 0
     assert hbtc.balanceOf(acc)  > 0
     assert frax.balanceOf(acc) > 0
-    assert mim.balanceOf(acc) > 0
+    assert dola.balanceOf(acc) > 0
+    # assert mim.balanceOf(acc) > 0
     yield acc
 
 
@@ -384,6 +396,28 @@ def wbtc_vault(pm, gov, rewards, guardian, wbtc):
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
+@pytest.fixture
+def dola_vault(pm, gov, rewards, guardian, dola):
+    currency = dola
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0xD4108Bb1185A5c30eA3f4264Fd7783473018Ce17')
+    strat1 = vault.withdrawalQueue(0)
+    # strat2 = vault.withdrawalQueue(1)
+    vault.updateStrategyDebtRatio(strat1, 0, {"from": gov})
+    # vault.updateStrategyDebtRatio(strat2, 0, {"from": gov})
+    # vault = gov.deploy(Vault)
+    # vault.initialize(currency, gov, rewards, "", "", guardian)
+    # vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
+
+@pytest.fixture
+def dola_fraxbp_vault(pm, gov, rewards, guardian, dola_fraxbp_pool):
+    currency = dola_fraxbp_pool
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian)
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
+    yield vault
 
 @pytest.fixture
 def dai_vault(pm, gov, rewards, guardian, dai):
@@ -444,6 +478,11 @@ def live_usdt_vault(pm):
 @pytest.fixture
 def strategy_frax(strategist,Strategy, frax_vault, fraxCurvePool, depositFrax, fraxyvault):
     strategy = strategist.deploy(Strategy, frax_vault, 3_000_000*1e18, 3600, 500, fraxCurvePool, depositFrax, fraxyvault,"ssc_frax_frax")
+    yield strategy
+
+@pytest.fixture
+def strategy_dola_fraxbp(strategist,Strategy, dola_vault, dola_fraxbp_pool, dola_fraxbp_vault):
+    strategy = strategist.deploy(Strategy, dola_vault, 3_000_000*1e18, 3600, 500, dola_fraxbp_pool, dola_fraxbp_pool, dola_fraxbp_vault,"ssc_dola_dolafraxbp")
     yield strategy
 
 @pytest.fixture
